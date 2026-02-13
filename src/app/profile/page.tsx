@@ -103,7 +103,7 @@ function formatHeight(inches: number | undefined): string {
 }
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [weight, setWeight] = useState("");
   const [heightFeet, setHeightFeet] = useState("");
@@ -200,6 +200,8 @@ export default function ProfilePage() {
     }
   };
 
+  if (authLoading) return null;
+
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 text-center text-ink/70">
@@ -217,11 +219,19 @@ export default function ProfilePage() {
         <h1 className="font-heading text-xl sm:text-2xl font-bold text-ink">
           Profile
         </h1>
-        {saved && (
-          <span className="text-xs sm:text-sm font-medium text-green-700">
-            Saved successfully
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {saved && (
+            <span className="text-xs sm:text-sm font-medium text-green-700">
+              Saved successfully
+            </span>
+          )}
+          <button
+            onClick={signOut}
+            className="rounded border border-leather/30 px-3 py-1.5 text-xs sm:text-sm text-ink/60 hover:border-red-300 hover:text-red-600 transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       {/* ===== VIEW MODE ===== */}

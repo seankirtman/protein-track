@@ -189,7 +189,7 @@ function EditableFoodRow({
 }
 
 export default function NutritionPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAddFood, setShowAddFood] = useState(false);
   const [newFoodName, setNewFoodName] = useState("");
@@ -321,6 +321,8 @@ export default function NutritionPage() {
 
   const isToday = dateKey(selectedDate) === dateKey(new Date());
 
+  if (authLoading) return null;
+
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 text-center text-ink/70">
@@ -389,8 +391,8 @@ export default function NutritionPage() {
 
         {loading ? (
           <div className="animate-pulse space-y-2">
-            <div className="h-12 rounded bg-aged" />
-            <div className="h-12 rounded bg-aged" />
+            <div className="h-10 rounded bg-aged/20" />
+            <div className="h-10 rounded bg-aged/20" />
           </div>
         ) : (
           <>

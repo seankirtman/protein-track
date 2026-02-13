@@ -24,7 +24,7 @@ function formatShortDate(d: Date) {
 }
 
 export default function PhotosPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [photo, setPhoto] = useState<PhotoEntry | null>(null);
   const [gallery, setGallery] = useState<PhotoEntry[]>([]);
@@ -245,6 +245,8 @@ export default function PhotosPage() {
 
   const isToday = dateStr === dateKey(new Date());
 
+  if (authLoading) return null;
+
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 text-center text-ink/70">
@@ -283,7 +285,7 @@ export default function PhotosPage() {
         </div>
 
         {loading ? (
-          <div className="aspect-square animate-pulse rounded bg-aged" />
+          <div className="aspect-square animate-pulse rounded bg-aged/20" />
         ) : photo?.photoURL ? (
           <div className="space-y-4">
             <div className="relative aspect-square overflow-hidden rounded border-2 border-leather/30">

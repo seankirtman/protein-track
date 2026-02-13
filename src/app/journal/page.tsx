@@ -18,7 +18,7 @@ function formatShortDate(d: Date) {
 }
 
 export default function JournalPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [newExerciseName, setNewExerciseName] = useState("");
   const [exerciseHistory, setExerciseHistory] = useState<string[]>([]);
@@ -97,6 +97,8 @@ export default function JournalPage() {
 
   const isToday = dateKey(selectedDate) === dateKey(new Date());
 
+  if (authLoading) return null;
+
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 text-center text-ink/70">
@@ -140,9 +142,10 @@ export default function JournalPage() {
         </div>
 
         {loading ? (
-          <div className="animate-pulse space-y-4">
-            <div className="h-24 rounded bg-aged" />
-            <div className="h-24 rounded bg-aged" />
+          <div className="animate-pulse space-y-3">
+            <div className="h-10 rounded bg-aged/30" />
+            <div className="h-20 rounded bg-aged/20" />
+            <div className="h-20 rounded bg-aged/20" />
           </div>
         ) : (
           <>
