@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         response_format: "b64_json",
         style: "natural",
       });
-      const b64 = res.data[0]?.b64_json;
+      const b64 = res.data?.[0]?.b64_json;
       if (b64) return `data:image/png;base64,${b64}`;
       return null;
     };

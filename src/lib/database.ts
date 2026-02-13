@@ -82,6 +82,7 @@ function photoFromRow(row: Record<string, unknown>): PhotoEntry {
     id: row.id as string,
     date: row.date as string,
     photoURL: row.photo_url as string,
+    weight: row.weight != null ? Number(row.weight) : undefined,
     notes: row.notes as string | undefined,
     createdAt: row.created_at as string | undefined,
   };
@@ -300,6 +301,7 @@ export async function savePhoto(userId: string, entry: PhotoEntry) {
       user_id: userId,
       date: entry.date,
       photo_url: entry.photoURL,
+      weight: entry.weight ?? null,
       notes: entry.notes,
       updated_at: new Date().toISOString(),
     },

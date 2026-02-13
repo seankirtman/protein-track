@@ -10,6 +10,7 @@ import {
   uploadPhoto,
   savePhoto,
   deletePhoto,
+  updateProfile,
 } from "@/lib/database";
 import { compressPhoto } from "@/lib/photoUtils";
 import type { PhotoEntry } from "@/types";
@@ -24,7 +25,7 @@ function formatShortDate(d: Date) {
 }
 
 export default function PhotosPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [photo, setPhoto] = useState<PhotoEntry | null>(null);
   const [gallery, setGallery] = useState<PhotoEntry[]>([]);
@@ -41,6 +42,8 @@ export default function PhotosPage() {
   const [webcamError, setWebcamError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [mainImageLoaded, setMainImageLoaded] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+  const [savingWeight, setSavingWeight] = useState(false);
 
   const isMobile =
     typeof navigator !== "undefined" &&
@@ -49,6 +52,37 @@ export default function PhotosPage() {
     );
 
   const dateStr = dateKey(selectedDate);
+
+  // Sync weight input when photo changes
+  useEffect(() => {
+    setWeightInput(photo?.weight != null ? String(photo.weight) : "");
+  }, [photo?.weight, photo?.date]);
+
+  const saveWeight = useCallback(
+    async (value: string) => {
+      if (!user || !photo) return;
+      const num = parseFloat(value);
+      if (Number.isNaN(num) || num < 0) return;
+      setSavingWeight(true);
+      try {
+        const updated = { ...photo, weight: num };
+        await savePhoto(user.id, updated);
+        await updateProfile(user.id, { weight: num });
+        await refreshProfile();
+        setPhoto(updated);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSavingWeight(false);
+      }
+    },
+    [user, photo, refreshProfile]
+  );
+
+  const handleWeightBlur = () => {
+    const v = weightInput.trim();
+    if (v && photo) saveWeight(v);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -321,6 +355,27 @@ export default function PhotosPage() {
             {captureError && (
               <p className="text-sm text-red-600">{captureError}</p>
             )}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label htmlFor="photo-weight" className="text-xs sm:text-sm text-ink/70">
+                  Weight (lbs):
+                </label>
+                <input
+                  id="photo-weight"
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  onBlur={handleWeightBlur}
+                  placeholder="—"
+                  className="w-20 rounded border border-leather/30 px-2 py-1 text-sm text-ink focus:border-rust focus:outline-none"
+                />
+                {savingWeight && (
+                  <span className="text-xs text-ink/50">Saving…</span>
+                )}
+              </div>
+            </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleTakePhoto}
@@ -468,6 +523,9 @@ export default function PhotosPage() {
                       }`}
                     >
                       {label}
+                      {p.weight != null && (
+                        <span className="block text-ink/40">{p.weight} lbs</span>
+                      )}
                     </span>
                   </button>
                 );
@@ -477,46 +535,68 @@ export default function PhotosPage() {
         </div>
 
         {compareDate && (
-          <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2 sm:gap-4">
-            <div>
-              <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
-                {formatShortDate(selectedDate)}
-              </p>
-              {photo?.photoURL && (
-                <div className="relative aspect-square overflow-hidden rounded border border-leather/30">
-                  <Image
-                    src={photo.photoURL}
-                    alt={dateStr}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              )}
+          <div className="mt-6 sm:mt-8">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div>
+                <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
+                  {formatShortDate(selectedDate)}
+                  {photo?.weight != null && (
+                    <span className="ml-1 font-normal text-ink/70">
+                      · {photo.weight} lbs
+                    </span>
+                  )}
+                </p>
+                {photo?.photoURL ? (
+                  <div className="relative aspect-square overflow-hidden rounded border border-leather/30">
+                    <Image
+                      src={photo.photoURL}
+                      alt={dateStr}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded border border-leather/20 bg-aged/30 flex items-center justify-center text-ink/50 text-sm">
+                    No photo
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
+                  {formatShortDate(new Date(compareDate + "T12:00:00"))}
+                  {comparePhoto?.weight != null && (
+                    <span className="ml-1 font-normal text-ink/70">
+                      · {comparePhoto.weight} lbs
+                    </span>
+                  )}
+                </p>
+                {comparePhoto?.photoURL ? (
+                  <div className="relative aspect-square overflow-hidden rounded border border-leather/30">
+                    <Image
+                      src={comparePhoto.photoURL}
+                      alt={compareDate}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded border border-leather/20 bg-aged/30 flex items-center justify-center text-ink/50 text-sm">
+                    No photo
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
-                {formatShortDate(new Date(compareDate + "T12:00:00"))}
+            {photo?.weight != null && comparePhoto?.weight != null && (
+              <p className="mt-2 text-sm font-medium text-rust">
+                Weight change: {photo.weight - comparePhoto.weight >= 0 ? "+" : ""}
+                {(photo.weight - comparePhoto.weight).toFixed(1)} lbs
               </p>
-              {comparePhoto?.photoURL ? (
-                <div className="relative aspect-square overflow-hidden rounded border border-leather/30">
-                  <Image
-                    src={comparePhoto.photoURL}
-                    alt={compareDate}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="aspect-square rounded border border-leather/20 bg-aged/30 flex items-center justify-center text-ink/50 text-sm">
-                  No photo
-                </div>
-              )}
-            </div>
+            )}
             <button
               onClick={() => setCompareDate(null)}
-              className="col-span-2 text-sm text-ink/60 hover:underline"
+              className="mt-2 text-sm text-ink/60 hover:underline"
             >
               Close comparison
             </button>

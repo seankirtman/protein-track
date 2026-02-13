@@ -58,6 +58,7 @@ export interface PhotoEntry {
   id: string;
   date: string;
   photoURL: string;
+  weight?: number;
   notes?: string;
   createdAt?: string;
 }
