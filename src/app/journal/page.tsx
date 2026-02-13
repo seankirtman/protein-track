@@ -29,6 +29,10 @@ export default function JournalPage() {
   const [surpriseInput, setSurpriseInput] = useState("");
   const [surpriseLoading, setSurpriseLoading] = useState(false);
   const [surpriseError, setSurpriseError] = useState("");
+  const [infoModal, setInfoModal] = useState<{ name: string; steps: string[]; imageDataUrl?: string | null } | null>(null);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const {
     workout,
     loading,
@@ -84,6 +88,57 @@ export default function JournalPage() {
       setCopyError("Failed to load workout.");
     } finally {
       setCopyLoading(false);
+    }
+  };
+
+  const handleInfoClick = async (exerciseName: string) => {
+    setInfoLoading(true);
+    setInfoModal(null);
+    try {
+      const res = await fetch("/api/ai/exercise-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load steps");
+      setInfoModal({ name: exerciseName, steps: data.steps || [] });
+    } catch {
+      setInfoModal({ name: exerciseName, steps: ["Could not load steps. Try again later."] });
+    } finally {
+      setInfoLoading(false);
+    }
+  };
+
+  const handleShowImage = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!infoModal || imageLoading) return;
+    setImageLoading(true);
+    setImageError(null);
+    const name = infoModal.name;
+    const steps = infoModal.steps;
+    try {
+      const res = await fetch("/api/ai/exercise-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseName: name, steps }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate image");
+      }
+      const url = data.imageDataUrl;
+      if (url && typeof url === "string") {
+        setInfoModal((prev) => (prev && prev.name === name ? { ...prev, imageDataUrl: url } : prev));
+      } else {
+        throw new Error("No image returned");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate image";
+      setImageError(msg);
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -201,58 +256,52 @@ export default function JournalPage() {
               </button>
             </form>
 
-            {/* Copy from another day */}
-            <div className="mb-4 sm:mb-6">
+            {/* Copy from another day & Surprise me */}
+            <div className="mb-4 sm:mb-6 flex flex-wrap items-center gap-2">
               {showCopyPicker ? (
-                <div className="rounded border border-leather/30 bg-white/60 p-3 space-y-2">
-                  <p className="text-xs sm:text-sm font-medium text-ink">
-                    Pick a date to copy exercises from:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      max={dateKey(new Date())}
-                      onChange={(e) => {
-                        if (e.target.value) handleCopyFromDate(e.target.value);
-                      }}
-                      disabled={copyLoading}
-                      className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1.5 text-sm text-ink focus:border-rust focus:outline-none disabled:opacity-50"
-                    />
-                    <button
-                      onClick={() => {
-                        setShowCopyPicker(false);
-                        setCopyError("");
-                      }}
-                      className="rounded px-3 py-1.5 text-xs sm:text-sm text-ink/60 hover:bg-aged/50 flex-shrink-0"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    max={dateKey(new Date())}
+                    onChange={(e) => {
+                      if (e.target.value) handleCopyFromDate(e.target.value);
+                    }}
+                    disabled={copyLoading}
+                    className="flex-1 min-w-[140px] rounded border border-leather/30 px-2 py-1.5 text-sm text-ink focus:border-rust focus:outline-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={() => {
+                      setShowCopyPicker(false);
+                      setCopyError("");
+                    }}
+                    className="rounded px-3 py-1.5 text-xs sm:text-sm text-ink/60 hover:bg-aged/50"
+                  >
+                    Cancel
+                  </button>
                   {copyLoading && (
-                    <p className="text-xs text-ink/50">Loading workout…</p>
+                    <span className="text-xs text-ink/50">Loading…</span>
                   )}
                   {copyError && (
-                    <p className="text-xs text-red-600">{copyError}</p>
+                    <span className="text-xs text-red-600">{copyError}</span>
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowCopyPicker(true)}
-                  className="text-xs sm:text-sm text-rust hover:underline"
-                >
-                  Copy from another day
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowCopyPicker(true)}
+                    className="text-xs sm:text-sm text-rust hover:underline"
+                  >
+                    Copy from another day
+                  </button>
+                  <button
+                    onClick={() => setShowSurpriseModal(true)}
+                    className="rounded-full bg-rust/15 border-2 border-rust/40 px-3 py-1.5 text-xs sm:text-sm font-medium text-rust hover:bg-rust/25 hover:border-rust/60 transition-colors"
+                    title="AI generates a workout for you"
+                  >
+                    ✨ Surprise me
+                  </button>
+                </>
               )}
-            </div>
-
-            {/* Surprise me */}
-            <div className="mb-4 sm:mb-6">
-              <button
-                onClick={() => setShowSurpriseModal(true)}
-                className="text-xs sm:text-sm text-rust hover:underline"
-              >
-                Surprise me
-              </button>
             </div>
 
             <div className="space-y-4">
@@ -311,6 +360,7 @@ export default function JournalPage() {
                           onAddSet={() => addSet(ex.id)}
                           onRemoveSet={(i) => removeSet(ex.id, i)}
                           onRemove={() => removeExercise(ex.id)}
+                          onInfoClick={handleInfoClick}
                         />
                       </div>
                     </div>
@@ -325,6 +375,80 @@ export default function JournalPage() {
           </>
         )}
       </JournalCard>
+
+      {/* Exercise info modal */}
+      {infoLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="rounded-lg bg-white px-6 py-4 shadow-xl text-sm text-ink">
+            Loading steps…
+          </div>
+        </div>
+      )}
+      {infoModal && !infoLoading && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
+          onClick={() => {
+            setInfoModal(null);
+            setImageLoading(false);
+            setImageError(null);
+          }}
+        >
+          <div
+            className="relative w-full sm:max-w-md rounded-t-xl sm:rounded-lg bg-white border-2 border-leather/40 p-4 sm:p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading text-lg font-bold text-ink">
+                How to do {infoModal.name}
+              </h3>
+              <button
+                onClick={() => {
+                  setInfoModal(null);
+                  setImageLoading(false);
+                  setImageError(null);
+                }}
+                className="text-ink/50 hover:text-ink text-lg leading-none"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <ol className="space-y-2 mb-4">
+              {infoModal.steps.map((step, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-rust/20 text-rust font-bold text-sm flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm text-ink">{step}</span>
+                </li>
+              ))}
+            </ol>
+            {!infoModal.imageDataUrl ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleShowImage}
+                  disabled={imageLoading}
+                  className="rounded-full bg-rust/15 border-2 border-rust/40 px-3 py-1.5 text-xs sm:text-sm font-medium text-rust hover:bg-rust/25 hover:border-rust/60 disabled:opacity-50 transition-colors"
+                >
+                  {imageLoading ? "Generating image…" : "Show image"}
+                </button>
+                {imageError && (
+                  <p className="text-xs text-red-600">{imageError}</p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg overflow-hidden border border-leather/30 bg-aged/20">
+                <img
+                  src={infoModal.imageDataUrl}
+                  alt={`Illustration of ${infoModal.name}`}
+                  className="w-full h-auto max-h-64 object-contain"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Surprise me modal */}
       {showSurpriseModal && (
@@ -347,7 +471,7 @@ export default function JournalPage() {
               </button>
             </div>
             <p className="text-sm text-ink/60 mb-3">
-              Describe the workout you want — e.g. &quot;upper body focus&quot;, &quot;leg day&quot;, &quot;quick abs&quot;, &quot;full body with cardio&quot;. AI will design a ~30 min workout using dumbbells, barbell, squat rack, and ab equipment.
+              Describe the workout you want — e.g. &quot;upper body focus&quot;, &quot;leg day&quot;, &quot;quick abs&quot;. AI will design a ~30 min workout using your olympic bar, dumbbells, medicine ball, exercise ball, or decline bench as needed.
             </p>
             <textarea
               value={surpriseInput}

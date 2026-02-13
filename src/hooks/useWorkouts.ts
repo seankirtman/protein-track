@@ -8,7 +8,7 @@ const CARDIO_KEYWORDS = [
   "run", "running", "jog", "jogging", "sprint", "sprints",
   "cycling", "cycle", "bike", "biking",
   "swimming", "swim",
-  "rowing", "row", "erg",
+  "rowing", "erg", // note: "row" excluded — barbell/dumbbell rows are strength
   "elliptical",
   "stair climber", "stairmaster", "stairs",
   "jump rope", "skipping",

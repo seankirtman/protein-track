@@ -13,7 +13,7 @@ const CARDIO_KEYWORDS = [
   "run", "running", "jog", "jogging", "sprint", "sprints",
   "cycling", "cycle", "bike", "biking",
   "swimming", "swim",
-  "rowing", "row", "erg",
+  "rowing", "erg", // note: "row" excluded — barbell/dumbbell rows are strength
   "elliptical",
   "stair climber", "stairmaster", "stairs",
   "jump rope", "skipping",
@@ -150,6 +150,70 @@ export async function getExerciseNames(userId: string): Promise<string[]> {
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 }
+
+// Exercise cache (steps, image, etc. - avoid repeated LLM calls)
+function exerciseCacheKey(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+export interface ExerciseCacheEntry {
+  nameKey: string;
+  nameDisplay?: string;
+  steps?: string[];
+  imageDataUrl?: string | null;
+  caloriesEstimate?: number | null;
+  proteinEstimate?: number | null;
+}
+
+export async function getExerciseCache(nameKey: string): Promise<ExerciseCacheEntry | null> {
+  const { data, error } = await supabase
+    .from("exercise_cache")
+    .select("name_key, name_display, steps, image_data_url, calories_estimate, protein_estimate")
+    .eq("name_key", nameKey)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    nameKey: data.name_key,
+    nameDisplay: data.name_display ?? undefined,
+    steps: (data.steps as string[]) ?? undefined,
+    imageDataUrl: data.image_data_url ?? undefined,
+    caloriesEstimate: data.calories_estimate ?? undefined,
+    proteinEstimate: data.protein_estimate ?? undefined,
+  };
+}
+
+export async function upsertExerciseCache(
+  nameKey: string,
+  updates: Partial<Pick<ExerciseCacheEntry, "nameDisplay" | "steps" | "imageDataUrl" | "caloriesEstimate" | "proteinEstimate">>
+) {
+  const existing = await getExerciseCache(nameKey);
+  const merged: ExerciseCacheEntry = {
+    nameKey,
+    nameDisplay: updates.nameDisplay ?? existing?.nameDisplay,
+    steps: updates.steps ?? existing?.steps,
+    imageDataUrl: updates.imageDataUrl ?? existing?.imageDataUrl,
+    caloriesEstimate: updates.caloriesEstimate ?? existing?.caloriesEstimate,
+    proteinEstimate: updates.proteinEstimate ?? existing?.proteinEstimate,
+  };
+
+  const row = {
+    name_key: nameKey,
+    name_display: merged.nameDisplay ?? null,
+    steps: merged.steps ?? null,
+    image_data_url: merged.imageDataUrl ?? null,
+    calories_estimate: merged.caloriesEstimate ?? null,
+    protein_estimate: merged.proteinEstimate ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("exercise_cache").upsert(row, {
+    onConflict: "name_key",
+  });
+  if (error) throw error;
+}
+
+export { exerciseCacheKey };
 
 // Food name history (for autocomplete)
 export async function getFoodNames(userId: string): Promise<string[]> {

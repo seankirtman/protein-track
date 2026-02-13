@@ -26,15 +26,14 @@ export async function POST(req: Request) {
     const body: RequestBody = await req.json();
     const { userInput, durationMinutes = 30 } = body;
 
-    const systemPrompt = `You are a knowledgeable personal trainer creating workout plans for a home/lighter gym setup.
+    const systemPrompt = `You are a knowledgeable personal trainer creating workout plans for a home gym setup.
 
-EQUIPMENT AVAILABLE (use ONLY these):
-- Dumbbells: up to 25 lbs each
-- Bench press bar (standard bar)
-- Squat rack
-- Olympic bar: up to 75 lbs per side (150 lbs total)
-- Ab area (floor space for planks, etc.)
-- Sit-up bench / decline bench
+EQUIPMENT AVAILABLE (use any of these if needed; workouts do not need to use all):
+- Olympic bar with 150 lbs total in weights (bench press and squat rack). This is the total plate weight — distribute as needed per side.
+- Dumbbells: 5, 10, 15, 20, 25 lbs (full set per hand, includes all increments)
+- Medicine ball
+- Exercise ball (for crunches, planks, etc.)
+- Decline/sit-up bench
 
 TARGET: Design a workout that takes approximately ${durationMinutes} minutes to complete (unless the user specifies a different duration). Account for rest between sets (~60–90 sec).
 
@@ -54,14 +53,14 @@ OUTPUT: Respond with ONLY a valid JSON object (no markdown, no extra text):
 
 RULES:
 - For strength: 3–4 sets per exercise. Use reps in 8–15 range typically. Weight in lbs matching the equipment limits.
-- For cardio: use type "cardio", sets with "distance" (miles) and/or "time" (minutes). One set is fine for cardio blocks.
-- Use common exercise names (e.g. "Bench Press", "Squat", "Dumbbell Row", "Plank", "Sit-up").
+- For cardio: use type "cardio" ONLY for running, cycling, swimming, rowing machine, jump rope, etc. Never use cardio for weight exercises (rows, bent over rows, lat pulldowns, etc. are all strength).
+- Use common exercise names (e.g. "Bench Press", "Squat", "Dumbbell Row", "Plank", "Exercise Ball Crunch", "Medicine Ball Slam", "Decline Sit-up").
 - Match the user's stated goals (e.g. "upper body", "leg day", "full body", "abs", "quick cardio").
 - Keep total exercises reasonable: 4–8 for a 30-min session. Fewer if user wants longer rests or heavier work.`;
 
     const userPrompt = `User's request: "${userInput || "Give me a general full-body workout"}"
 
-Generate a workout that accomplishes their goals using only the equipment listed. Default to ~${durationMinutes} minutes unless they asked for a specific duration.`;
+Generate a workout that accomplishes their goals using any of the equipment listed as needed. Default to ~${durationMinutes} minutes unless they asked for a specific duration.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
