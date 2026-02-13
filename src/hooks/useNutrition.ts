@@ -58,7 +58,7 @@ export function useNutrition(
     refresh();
   }, [refresh]);
 
-  // Debounced auto-save: triggers 1s after last change. Flush on unmount so we don't lose data when navigating away.
+  // Auto-save: 300ms debounce after changes. Flush on date change so we don't lose data when navigating.
   useEffect(() => {
     if (!userId || !day || !initialLoadDone.current) return;
 
@@ -73,7 +73,8 @@ export function useNutrition(
         setSaveStatus("error");
         setTimeout(() => setSaveStatus("idle"), 3000);
       }
-    }, 1000);
+      saveTimer.current = null;
+    }, 300);
 
     return () => {
       if (saveTimer.current) {

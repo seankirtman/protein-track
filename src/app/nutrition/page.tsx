@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useNutrition } from "@/hooks/useNutrition";
@@ -317,23 +318,23 @@ export default function NutritionPage() {
 
   const goPrevDay = () => {
     resetForm();
-    // Defer so any blur-triggered saves (e.g. from EditableFoodRow) commit first, then flush and navigate
-    setTimeout(async () => {
-      await flushSave();
+    // Force any pending state updates (e.g. from addFood) to commit, then save before navigating
+    flushSync(() => {});
+    flushSave().then(() => {
       const d = new Date(selectedDate);
       d.setDate(d.getDate() - 1);
       setSelectedDate(d);
-    }, 0);
+    });
   };
 
   const goNextDay = () => {
     resetForm();
-    setTimeout(async () => {
-      await flushSave();
+    flushSync(() => {});
+    flushSave().then(() => {
       const d = new Date(selectedDate);
       d.setDate(d.getDate() + 1);
       setSelectedDate(d);
-    }, 0);
+    });
   };
 
   const isToday = dateKey(selectedDate) === dateKey(new Date());
