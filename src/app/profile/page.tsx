@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
 import { updateProfile } from "@/lib/database";
-import { estimateCalories } from "@/lib/nutrition";
+import { estimateCalories, getCalorieGoal } from "@/lib/nutrition";
 
 const GOAL_LABELS: Record<string, string> = {
   aggressive_bulk: "Aggressive Bulk",
@@ -111,6 +112,7 @@ export default function ProfilePage() {
   const [activityLevel, setActivityLevel] = useState<"sedentary" | "light" | "moderate" | "active" | "very_active">("moderate");
   const [goal, setGoal] = useState<"lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut">("maintain");
   const [proteinGoal, setProteinGoal] = useState("");
+  const [calorieGoal, setCalorieGoal] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiReasoning, setAiReasoning] = useState("");
   const [error, setError] = useState("");
@@ -127,6 +129,7 @@ export default function ProfilePage() {
     setActivityLevel(profile.activityLevel ?? "moderate");
     setGoal(profile.goal ?? "maintain");
     setProteinGoal(profile.dailyProteinGoal?.toString() ?? "");
+    setCalorieGoal(profile.dailyCalorieGoal?.toString() ?? "");
   }, [profile]);
 
   const totalHeightInches =
@@ -134,7 +137,7 @@ export default function ProfilePage() {
       ? (parseInt(heightFeet) || 0) * 12 + (parseInt(heightInches) || 0)
       : undefined;
 
-  const hasProfile = !!(profile?.weight || profile?.height || profile?.age || profile?.dailyProteinGoal);
+  const hasProfile = !!(profile?.weight || profile?.height || profile?.age || profile?.dailyProteinGoal || profile?.dailyCalorieGoal != null);
 
   const handleCalculateProtein = async () => {
     if (!user) return;
@@ -170,7 +173,9 @@ export default function ProfilePage() {
   const handleSaveManual = async () => {
     if (!user) return;
     const pg = proteinGoal ? parseFloat(proteinGoal) : undefined;
+    const cg = calorieGoal.trim() ? parseFloat(calorieGoal) : undefined;
     if (pg !== undefined && (isNaN(pg) || pg < 0)) return;
+    if (cg !== undefined && (isNaN(cg) || cg < 0)) return;
     setLoading(true);
     setSaved(false);
     setError("");
@@ -182,6 +187,7 @@ export default function ProfilePage() {
         activityLevel,
         goal,
         ...(pg !== undefined ? { dailyProteinGoal: pg } : {}),
+        ...(calorieGoal.trim() ? { dailyCalorieGoal: cg } : { dailyCalorieGoal: null }),
       });
       await refreshProfile();
       setEditing(false);
@@ -203,13 +209,16 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-2xl font-bold text-ink">
+    <div className="mx-auto max-w-2xl px-2 py-3 sm:px-4 sm:py-8">
+      <Link href="/" className="inline-flex items-center gap-1 text-xs sm:text-sm text-ink/50 hover:text-rust mb-2 sm:mb-3 px-1">
+        ← Dashboard
+      </Link>
+      <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
+        <h1 className="font-heading text-xl sm:text-2xl font-bold text-ink">
           Profile
         </h1>
         {saved && (
-          <span className="text-sm font-medium text-green-700">
+          <span className="text-xs sm:text-sm font-medium text-green-700">
             Saved successfully
           </span>
         )}
@@ -218,27 +227,27 @@ export default function ProfilePage() {
       {/* ===== VIEW MODE ===== */}
       {hasProfile && !editing ? (
         <>
-          <JournalCard title="Your Stats">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <JournalCard title="Your Stats" className="!p-3 sm:!p-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <span className="block text-xs text-ink/50 uppercase tracking-wide">Weight</span>
-                <p className="font-mono text-lg text-ink">{profile?.weight ? `${profile.weight} lbs` : "—"}</p>
+                <span className="block text-[10px] sm:text-xs text-ink/50 uppercase tracking-wide">Weight</span>
+                <p className="font-mono text-base sm:text-lg text-ink">{profile?.weight ? `${profile.weight} lbs` : "—"}</p>
               </div>
               <div>
-                <span className="block text-xs text-ink/50 uppercase tracking-wide">Height</span>
-                <p className="font-mono text-lg text-ink">{formatHeight(profile?.height)}</p>
+                <span className="block text-[10px] sm:text-xs text-ink/50 uppercase tracking-wide">Height</span>
+                <p className="font-mono text-base sm:text-lg text-ink">{formatHeight(profile?.height)}</p>
               </div>
               <div>
-                <span className="block text-xs text-ink/50 uppercase tracking-wide">Age</span>
-                <p className="font-mono text-lg text-ink">{profile?.age ?? "—"}</p>
+                <span className="block text-[10px] sm:text-xs text-ink/50 uppercase tracking-wide">Age</span>
+                <p className="font-mono text-base sm:text-lg text-ink">{profile?.age ?? "—"}</p>
               </div>
               <div>
-                <span className="block text-xs text-ink/50 uppercase tracking-wide">Activity</span>
-                <p className="font-mono text-lg text-ink">{ACTIVITY_LABELS[profile?.activityLevel ?? ""] ?? "—"}</p>
+                <span className="block text-[10px] sm:text-xs text-ink/50 uppercase tracking-wide">Activity</span>
+                <p className="font-mono text-base sm:text-lg text-ink">{ACTIVITY_LABELS[profile?.activityLevel ?? ""] ?? "—"}</p>
               </div>
-              <div className="sm:col-span-2">
-                <span className="block text-xs text-ink/50 uppercase tracking-wide">Goal</span>
-                <p className="font-mono text-lg text-ink">{GOAL_LABELS[profile?.goal ?? ""] ?? "—"}</p>
+              <div className="col-span-2">
+                <span className="block text-[10px] sm:text-xs text-ink/50 uppercase tracking-wide">Goal</span>
+                <p className="font-mono text-base sm:text-lg text-ink">{GOAL_LABELS[profile?.goal ?? ""] ?? "—"}</p>
               </div>
             </div>
             <button
@@ -249,8 +258,8 @@ export default function ProfilePage() {
             </button>
           </JournalCard>
 
-          <JournalCard title="Daily Protein Goal" className="mt-6">
-            <p className="text-sm text-ink/70 mb-4 leading-relaxed">
+          <JournalCard title="Daily Protein Goal" className="mt-3 sm:mt-6 !p-3 sm:!p-6">
+            <p className="text-xs sm:text-sm text-ink/70 mb-3 sm:mb-4 leading-relaxed">
               {getProteinNote(
                 profile?.weight,
                 profile?.height,
@@ -259,10 +268,10 @@ export default function ProfilePage() {
               )}
             </p>
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="font-mono text-2xl font-bold text-ink">
+              <span className="font-mono text-xl sm:text-2xl font-bold text-ink">
                 {profile?.dailyProteinGoal ?? "—"}
               </span>
-              <span className="text-ink/60">grams / day</span>
+              <span className="text-sm sm:text-base text-ink/60">grams / day</span>
             </div>
             <button
               onClick={() => setEditing(true)}
@@ -271,32 +280,31 @@ export default function ProfilePage() {
               Edit Goal
             </button>
 
-            {/* Auto-calculated calorie goal */}
+            {/* Daily calorie goal (override or estimated) */}
             {(() => {
-              const cal = estimateCalories(
+              const override = profile?.dailyCalorieGoal;
+              const estimated = estimateCalories(
                 profile?.weight,
                 profile?.height,
                 profile?.age,
                 profile?.activityLevel ?? "moderate",
                 profile?.goal ?? "maintain"
               );
-              if (!cal) return null;
-              const goalLabel = GOAL_LABELS[profile?.goal ?? "maintain"];
-              const isSurplus = ["aggressive_bulk", "bulk", "lean_bulk"].includes(profile?.goal ?? "");
-              const isDeficit = ["cut", "aggressive_cut"].includes(profile?.goal ?? "");
+              const display = override ?? estimated;
+              if (!display) return null;
               return (
-                <div className="mt-6 rounded border border-leather/20 bg-parchment/50 px-4 py-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm text-ink/60">Estimated Daily Calories</span>
-                    <span className="font-mono text-xl font-bold text-ink">{cal.toLocaleString()}</span>
-                    <span className="text-sm text-ink/60">kcal</span>
+                <div className="mt-4 sm:mt-6 rounded border border-leather/20 bg-parchment/50 px-3 sm:px-4 py-2 sm:py-3">
+                  <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                    <span className="text-xs sm:text-sm text-ink/60">
+                      {override != null ? "Daily Calorie Goal" : "Est. Daily Calories"}
+                    </span>
+                    <span className="font-mono text-lg sm:text-xl font-bold text-ink">{display.toLocaleString()}</span>
+                    <span className="text-xs sm:text-sm text-ink/60">kcal</span>
                   </div>
-                  <p className="mt-1 text-xs text-ink/50">
-                    Based on your stats &amp; {goalLabel} goal
-                    {isSurplus && " — includes a caloric surplus for muscle growth"}
-                    {isDeficit && " — includes a caloric deficit for fat loss"}
-                    {!isSurplus && !isDeficit && " — maintenance calories"}.
-                    {" "}This is an estimate; adjust based on real-world results.
+                  <p className="mt-1 text-[10px] sm:text-xs text-ink/50">
+                    {override != null
+                      ? "Your custom target. Clear in Edit to use auto estimate."
+                      : `Based on your stats & goal. Set a custom target in Edit.`}
                   </p>
                 </div>
               );
@@ -306,24 +314,24 @@ export default function ProfilePage() {
       ) : (
         /* ===== EDIT MODE ===== */
         <>
-          <JournalCard title="Your Stats">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <JournalCard title="Your Stats" className="!p-3 sm:!p-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm text-ink/70">Weight (lbs)</label>
+                <label className="block text-xs sm:text-sm text-ink/70">Weight (lbs)</label>
                 <input
                   type="number"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                  className="mt-1 w-full rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                 />
               </div>
               <div>
-                <label className="block text-sm text-ink/70">Height</label>
+                <label className="block text-xs sm:text-sm text-ink/70">Height</label>
                 <div className="mt-1 flex gap-2">
                   <select
                     value={heightFeet}
                     onChange={(e) => setHeightFeet(e.target.value)}
-                    className="flex-1 rounded border border-leather/30 px-3 py-2"
+                    className="flex-1 min-w-0 rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                   >
                     <option value="">ft</option>
                     <option value="4">4 ft</option>
@@ -334,7 +342,7 @@ export default function ProfilePage() {
                   <select
                     value={heightInches}
                     onChange={(e) => setHeightInches(e.target.value)}
-                    className="flex-1 rounded border border-leather/30 px-3 py-2"
+                    className="flex-1 min-w-0 rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                   >
                     <option value="">in</option>
                     {Array.from({ length: 12 }, (_, i) => (
@@ -346,20 +354,20 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-ink/70">Age</label>
+                <label className="block text-xs sm:text-sm text-ink/70">Age</label>
                 <input
                   type="number"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
-                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                  className="mt-1 w-full rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                 />
               </div>
               <div>
-                <label className="block text-sm text-ink/70">Activity level</label>
+                <label className="block text-xs sm:text-sm text-ink/70">Activity level</label>
                 <select
                   value={activityLevel}
                   onChange={(e) => setActivityLevel(e.target.value as "sedentary" | "light" | "moderate" | "active" | "very_active")}
-                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                  className="mt-1 w-full rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                 >
                   <option value="sedentary">Sedentary</option>
                   <option value="light">Light</option>
@@ -368,26 +376,26 @@ export default function ProfilePage() {
                   <option value="very_active">Very active</option>
                 </select>
               </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm text-ink/70">Goal</label>
+              <div className="col-span-2">
+                <label className="block text-xs sm:text-sm text-ink/70">Goal</label>
                 <select
                   value={goal}
                   onChange={(e) => setGoal(e.target.value as "lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut")}
-                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                  className="mt-1 w-full rounded border border-leather/30 px-2 sm:px-3 py-2 text-sm sm:text-base"
                 >
-                  <option value="aggressive_bulk">Aggressive Bulk — max muscle gain, high surplus</option>
-                  <option value="bulk">Lean Bulk — steady muscle gain, moderate surplus</option>
-                  <option value="lean_bulk">Clean Bulk — slow gain, minimal fat</option>
-                  <option value="maintain">Maintain — hold current weight &amp; composition</option>
-                  <option value="cut">Cut — lose fat, preserve muscle</option>
-                  <option value="aggressive_cut">Aggressive Cut — rapid fat loss</option>
+                  <option value="aggressive_bulk">Aggressive Bulk</option>
+                  <option value="bulk">Lean Bulk</option>
+                  <option value="lean_bulk">Clean Bulk</option>
+                  <option value="maintain">Maintain</option>
+                  <option value="cut">Cut</option>
+                  <option value="aggressive_cut">Aggressive Cut</option>
                 </select>
               </div>
             </div>
           </JournalCard>
 
-          <JournalCard title="Daily Protein Goal" className="mt-6">
-            <p className="text-sm text-ink/70 mb-4 leading-relaxed">
+          <JournalCard title="Daily Protein Goal" className="mt-3 sm:mt-6 !p-3 sm:!p-6">
+            <p className="text-xs sm:text-sm text-ink/70 mb-3 sm:mb-4 leading-relaxed">
               {getProteinNote(
                 weight ? parseFloat(weight) : undefined,
                 totalHeightInches,
@@ -395,76 +403,70 @@ export default function ProfilePage() {
                 activityLevel
               )}
             </p>
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-3 sm:mb-4">
               <input
                 type="number"
                 min={0}
                 value={proteinGoal}
                 onChange={(e) => setProteinGoal(e.target.value)}
-                className="w-24 rounded border border-leather/30 px-3 py-2 font-mono"
+                className="w-20 sm:w-24 rounded border border-leather/30 px-2 sm:px-3 py-2 font-mono text-sm sm:text-base"
                 placeholder="150"
               />
-              <span className="flex items-center text-ink/70">grams</span>
+              <span className="flex items-center text-sm sm:text-base text-ink/70">grams</span>
             </div>
             <button
               onClick={handleCalculateProtein}
               disabled={loading}
-              className="rounded bg-rust px-4 py-2 text-white hover:bg-rust/90 disabled:opacity-50 mr-2"
+              className="rounded bg-rust px-3 sm:px-4 py-2 text-sm sm:text-base text-white hover:bg-rust/90 disabled:opacity-50 mr-2"
             >
               {loading ? "Calculating…" : "Calculate with AI"}
             </button>
             {aiReasoning && (
-              <p className="mt-4 text-sm text-ink/60 italic border-l-2 border-rust/30 pl-3">{aiReasoning}</p>
+              <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-ink/60 italic border-l-2 border-rust/30 pl-3">{aiReasoning}</p>
             )}
 
-            {/* Auto-calculated calorie goal */}
-            {(() => {
-              const cal = estimateCalories(
-                weight ? parseFloat(weight) : undefined,
-                totalHeightInches,
-                age ? parseInt(age) : undefined,
-                activityLevel,
-                goal ?? "maintain"
-              );
-              if (!cal) return null;
-              const goalLabel = GOAL_LABELS[goal ?? "maintain"];
-              const isSurplus = ["aggressive_bulk", "bulk", "lean_bulk"].includes(goal ?? "");
-              const isDeficit = ["cut", "aggressive_cut"].includes(goal ?? "");
-              return (
-                <div className="mt-6 rounded border border-leather/20 bg-parchment/50 px-4 py-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm text-ink/60">Estimated Daily Calories</span>
-                    <span className="font-mono text-xl font-bold text-ink">{cal.toLocaleString()}</span>
-                    <span className="text-sm text-ink/60">kcal</span>
-                  </div>
-                  <p className="mt-1 text-xs text-ink/50">
-                    Based on your stats &amp; {goalLabel} goal
-                    {isSurplus && " — includes a caloric surplus for muscle growth"}
-                    {isDeficit && " — includes a caloric deficit for fat loss"}
-                    {!isSurplus && !isDeficit && " — maintenance calories"}.
-                    {" "}This is an estimate; adjust based on real-world results.
-                  </p>
-                </div>
-              );
-            })()}
+            {/* Daily calorie goal override */}
+            <div className="mt-4 sm:mt-6">
+              <label className="block text-xs sm:text-sm text-ink/70">Daily calorie goal (optional)</label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={calorieGoal}
+                  onChange={(e) => setCalorieGoal(e.target.value)}
+                  placeholder={estimateCalories(
+                    weight ? parseFloat(weight) : undefined,
+                    totalHeightInches,
+                    age ? parseInt(age) : undefined,
+                    activityLevel,
+                    goal ?? "maintain"
+                  )?.toString() ?? "Auto"}
+                  className="w-24 sm:w-28 rounded border border-leather/30 px-2 sm:px-3 py-2 font-mono text-sm sm:text-base"
+                />
+                <span className="text-sm sm:text-base text-ink/70">kcal</span>
+              </div>
+              <p className="mt-1 text-[10px] sm:text-xs text-ink/50">
+                Override the estimated target. Leave blank for auto.
+              </p>
+            </div>
           </JournalCard>
 
           {error && (
             <p className="mt-4 text-red-600 text-sm">{error}</p>
           )}
 
-          <div className="mt-6 flex items-center gap-4">
+          <div className="mt-4 sm:mt-6 flex items-center gap-3 sm:gap-4 px-1">
             <button
               onClick={handleSaveManual}
               disabled={loading}
-              className="rounded bg-rust px-4 py-2 font-medium text-white hover:bg-rust/90 disabled:opacity-50"
+              className="rounded bg-rust px-4 py-2 text-sm sm:text-base font-medium text-white hover:bg-rust/90 disabled:opacity-50"
             >
               {loading ? "Saving…" : "Save Profile"}
             </button>
             {hasProfile && (
               <button
                 onClick={() => setEditing(false)}
-                className="rounded px-4 py-2 text-ink/70 hover:bg-aged/50"
+                className="rounded px-4 py-2 text-sm sm:text-base text-ink/70 hover:bg-aged/50"
               >
                 Cancel
               </button>

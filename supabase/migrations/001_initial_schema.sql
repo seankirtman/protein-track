@@ -12,6 +12,7 @@ create table profiles (
   activity_level text check (activity_level in ('sedentary', 'light', 'moderate', 'active', 'very_active')),
   goal text check (goal in ('lean_bulk', 'bulk', 'aggressive_bulk', 'maintain', 'cut', 'aggressive_cut')),
   daily_protein_goal numeric,
+  daily_calorie_goal numeric,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

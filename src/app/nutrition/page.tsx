@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useNutrition } from "@/hooks/useNutrition";
 import { JournalCard } from "@/components/layout/JournalCard";
@@ -10,7 +11,7 @@ import { ShortfallAlert } from "@/components/nutrition/ShortfallAlert";
 import { FoodRecommendations } from "@/components/nutrition/FoodRecommendations";
 import { FoodSearch } from "@/components/nutrition/FoodSearch";
 import { getFoodNames } from "@/lib/database";
-import { estimateCaloriesFromProfile } from "@/lib/nutrition";
+import { getCalorieGoal } from "@/lib/nutrition";
 import type { FoodEntry } from "@/types";
 
 function dateKey(d: Date) {
@@ -68,7 +69,7 @@ function EditableFoodRow({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             placeholder="Qty"
-            className="w-14 rounded border border-leather/30 px-2 py-1 text-center text-sm text-ink"
+            className="w-14 flex-shrink-0 rounded border border-leather/30 px-2 py-1 text-center text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
           <span className="flex items-center text-ink/40 text-sm">×</span>
@@ -76,31 +77,31 @@ function EditableFoodRow({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded border border-leather/30 px-2 py-1 text-sm text-ink"
+            className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 text-sm text-ink"
             autoFocus
             onKeyDown={handleKeyDown}
           />
         </div>
         <div className="flex gap-2 items-center">
-          <label className="text-xs text-ink/40">Protein</label>
+          <label className="text-xs text-ink/40 flex-shrink-0">Protein</label>
           <input
             type="number"
             min={0}
             step={0.5}
             value={protein}
             onChange={(e) => setProtein(e.target.value)}
-            className="w-16 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+            className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
           <span className="text-xs text-ink/40">g</span>
-          <label className="text-xs text-ink/40 ml-2">Cal</label>
+          <label className="text-xs text-ink/40 flex-shrink-0">Cal</label>
           <input
             type="number"
             min={0}
             step={1}
             value={calories}
             onChange={(e) => setCalories(e.target.value)}
-            className="w-16 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+            className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
           <span className="text-xs text-ink/40">kcal</span>
@@ -131,7 +132,7 @@ function EditableFoodRow({
 
   return (
     <div
-      className={`flex items-center gap-3 rounded border px-4 py-2 transition-colors ${
+      className={`flex items-center gap-2 sm:gap-3 rounded border px-2 sm:px-4 py-2 transition-colors ${
         isEaten
           ? "border-green-300/50 bg-green-50/40"
           : "border-leather/20 bg-white/60"
@@ -154,23 +155,23 @@ function EditableFoodRow({
       </button>
       <button
         onClick={() => setEditing(true)}
-        className={`flex-1 text-left transition-colors ${
+        className={`flex-1 min-w-0 text-left text-sm sm:text-base truncate transition-colors ${
           isEaten ? "text-ink/50 line-through" : "text-ink hover:text-rust"
         }`}
       >
         {food.quantity ? `${food.quantity} × ${food.name}` : food.name}
       </button>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <div className="text-right">
           <span
-            className={`font-mono text-sm ${
+            className={`font-mono text-xs sm:text-sm ${
               isEaten ? "text-green-600" : "text-rust/50"
             }`}
           >
             {food.protein}g
           </span>
           {food.calories ? (
-            <span className={`block font-mono text-xs ${isEaten ? "text-green-500/70" : "text-ink/40"}`}>
+            <span className={`block font-mono text-[10px] sm:text-xs ${isEaten ? "text-green-500/70" : "text-ink/40"}`}>
               {food.calories} cal
             </span>
           ) : null}
@@ -233,7 +234,7 @@ export default function NutritionPage() {
     ?.filter((f) => f.eaten)
     .reduce((s, f) => s + (f.calories ?? 0), 0) ?? 0;
   const totalCalories = day?.totalCalories ?? 0;
-  const calorieGoal = estimateCaloriesFromProfile(profile) ?? 2000;
+  const calorieGoal = getCalorieGoal(profile) ?? 2000;
 
   const handleAddFood = () => {
     const name = newFoodName.trim();
@@ -329,25 +330,28 @@ export default function NutritionPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <JournalCard>
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="mx-auto max-w-2xl px-2 py-3 sm:px-4 sm:py-8">
+      <Link href="/" className="inline-flex items-center gap-1 text-xs sm:text-sm text-ink/50 hover:text-rust mb-2 sm:mb-3 px-1">
+        ← Dashboard
+      </Link>
+      <JournalCard className="!p-3 sm:!p-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={goPrevDay}
-              className="rounded px-3 py-1 text-ink/70 hover:bg-aged/50"
+              className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"
             >
               ←
             </button>
-            <h1 className="font-heading text-xl font-bold text-ink">
+            <h1 className="font-heading text-base sm:text-xl font-bold text-ink">
               {formatShortDate(selectedDate)}
               {isToday && (
-                <span className="ml-2 text-sm font-normal text-rust">Today</span>
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-rust">Today</span>
               )}
             </h1>
             <button
               onClick={goNextDay}
-              className="rounded px-3 py-1 text-ink/70 hover:bg-aged/50"
+              className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"
             >
               →
             </button>
@@ -409,14 +413,14 @@ export default function NutritionPage() {
             </div>
 
             {showAddFood ? (
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 sm:mt-6 space-y-3">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newFoodQuantity}
                     onChange={(e) => setNewFoodQuantity(e.target.value)}
                     placeholder="Qty (e.g. 8oz)"
-                    className="w-32 rounded border border-leather/30 px-2 py-2 text-sm text-ink"
+                    className="w-24 sm:w-32 flex-shrink-0 rounded border border-leather/30 px-2 py-2 text-sm text-ink"
                   />
                   <span className="flex items-center text-ink/40">×</span>
                   <FoodSearch
@@ -426,61 +430,59 @@ export default function NutritionPage() {
                     placeholder="Food name (e.g. Eggs)"
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-ink/50">Protein</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.5}
-                      value={newFoodProtein}
-                      onChange={(e) => {
-                        setNewFoodProtein(e.target.value);
-                        if (estimating) {
-                          setEstimating(false);
-                          if (estimateTimer.current) clearTimeout(estimateTimer.current);
-                        }
-                      }}
-                      placeholder={estimating ? "estimating…" : ""}
-                      className={`w-28 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
-                    />
-                    <span className="text-xs text-ink/40">g</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-ink/50">Calories</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={newFoodCalories}
-                      onChange={(e) => {
-                        setNewFoodCalories(e.target.value);
-                        if (estimating) {
-                          setEstimating(false);
-                          if (estimateTimer.current) clearTimeout(estimateTimer.current);
-                        }
-                      }}
-                      placeholder={estimating ? "estimating…" : ""}
-                      className={`w-28 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
-                    />
-                    <span className="text-xs text-ink/40">kcal</span>
-                  </div>
-                  <div className="flex gap-2 ml-auto">
-                    <button
-                      type="button"
-                      onClick={handleAddFood}
-                      className="rounded bg-rust px-4 py-2 font-medium text-white hover:bg-rust/90"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddFood(false)}
-                      className="rounded px-4 py-2 text-ink/70 hover:bg-aged/50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-ink/50 flex-shrink-0">Protein</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={newFoodProtein}
+                    onChange={(e) => {
+                      setNewFoodProtein(e.target.value);
+                      if (estimating) {
+                        setEstimating(false);
+                        if (estimateTimer.current) clearTimeout(estimateTimer.current);
+                      }
+                    }}
+                    placeholder={estimating ? "estimating…" : ""}
+                    className={`flex-1 min-w-0 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
+                  />
+                  <span className="text-xs text-ink/40">g</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-ink/50 flex-shrink-0">Calories</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={newFoodCalories}
+                    onChange={(e) => {
+                      setNewFoodCalories(e.target.value);
+                      if (estimating) {
+                        setEstimating(false);
+                        if (estimateTimer.current) clearTimeout(estimateTimer.current);
+                      }
+                    }}
+                    placeholder={estimating ? "estimating…" : ""}
+                    className={`flex-1 min-w-0 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
+                  />
+                  <span className="text-xs text-ink/40">kcal</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddFood}
+                    className="rounded bg-rust px-4 py-2 text-sm sm:text-base font-medium text-white hover:bg-rust/90"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddFood(false)}
+                    className="rounded px-4 py-2 text-sm sm:text-base text-ink/70 hover:bg-aged/50"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             ) : (

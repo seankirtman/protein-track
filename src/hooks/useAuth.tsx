@@ -82,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           activityLevel: data.activity_level,
           goal: data.goal,
           dailyProteinGoal: data.daily_protein_goal,
+          dailyCalorieGoal: data.daily_calorie_goal,
         });
       } else {
         const { data: userData } = await supabase.auth.getUser();

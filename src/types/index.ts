@@ -7,6 +7,7 @@ export interface UserProfile {
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
   goal?: "lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut";
   dailyProteinGoal?: number;
+  dailyCalorieGoal?: number;
 }
 
 export interface Set {

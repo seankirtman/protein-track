@@ -9,10 +9,14 @@
   --leather: #8b7355;
 }
 
+html {
+  height: 100%;
+}
+
 body {
+  min-height: 100%;
   background-color: var(--parchment);
   color: var(--ink);
-  min-height: 100vh;
 }
 
 /* Paper texture overlay (subtle) */

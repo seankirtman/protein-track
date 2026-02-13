@@ -74,32 +74,32 @@ export function DashboardStats({ userId, proteinGoal, calorieGoal }: DashboardSt
   const calorieColor = caloriesCurrent === null ? "text-ink" : calorieMet ? "text-green-600" : "text-ink/80";
 
   return (
-    <div className="grid grid-cols-3 gap-4 text-sm">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
       <div>
-        <span className="text-ink/60">Exercise Today</span>
-        <p className={`font-mono text-lg font-bold ${exerciseColor}`}>
+        <span className="text-ink/60 text-[10px] sm:text-xs">Exercise</span>
+        <p className={`font-mono text-sm sm:text-lg font-bold ${exerciseColor}`}>
           {exerciseLabel}
         </p>
       </div>
       <div>
-        <span className="text-ink/60">Protein</span>
-        <p className="font-mono text-lg font-bold">
+        <span className="text-ink/60 text-[10px] sm:text-xs">Protein</span>
+        <p className="font-mono text-sm sm:text-lg font-bold">
           <span className={proteinColor}>
             {proteinCurrent !== null ? `${proteinCurrent}g` : "—"}
           </span>
-          <span className="text-sm font-normal text-ink/50">
+          <span className="text-[10px] sm:text-sm font-normal text-ink/50">
             {" "}/ {proteinGoal}g
           </span>
         </p>
       </div>
       <div>
-        <span className="text-ink/60">Calories</span>
-        <p className="font-mono text-lg font-bold">
+        <span className="text-ink/60 text-[10px] sm:text-xs">Calories</span>
+        <p className="font-mono text-sm sm:text-lg font-bold">
           <span className={calorieColor}>
             {caloriesCurrent !== null ? caloriesCurrent.toLocaleString() : "—"}
           </span>
           {calorieGoal ? (
-            <span className="text-sm font-normal text-ink/50">
+            <span className="text-[10px] sm:text-sm font-normal text-ink/50">
               {" "}/ {calorieGoal.toLocaleString()}
             </span>
           ) : null}

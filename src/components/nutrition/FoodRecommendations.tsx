@@ -80,8 +80,8 @@ export function FoodRecommendations({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg bg-paper p-5 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-lg bg-paper p-4 sm:p-5 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-lg font-bold text-ink">
                 Meal Recommendations

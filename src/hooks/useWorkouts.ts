@@ -173,6 +173,24 @@ export function useWorkouts(userId: string | undefined, selectedDate: Date) {
     });
   }, []);
 
+  /** Clone exercises from a source workout into the current day (new IDs, uncompleted). */
+  const importExercises = useCallback(
+    (sourceExercises: Exercise[]) => {
+      const cloned = sourceExercises.map((ex) => ({
+        ...ex,
+        id: crypto.randomUUID(),
+        completed: false,
+        sets: ex.sets.map((s) => ({ ...s })),
+      }));
+      setWorkout((prev) => ({
+        ...(prev ?? { id: "", date: dateStr, exercises: [] }),
+        date: dateStr,
+        exercises: [...(prev?.exercises ?? []), ...cloned],
+      }));
+    },
+    [dateStr]
+  );
+
   return {
     workout,
     loading,
@@ -184,6 +202,7 @@ export function useWorkouts(userId: string | undefined, selectedDate: Date) {
     addSet,
     removeSet,
     reorderExercises,
+    importExercises,
     refresh,
   };
 }

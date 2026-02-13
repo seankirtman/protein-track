@@ -244,6 +244,16 @@ export async function savePhoto(userId: string, entry: PhotoEntry) {
   if (error) throw error;
 }
 
+export async function deletePhoto(userId: string, date: string): Promise<void> {
+  const path = `${userId}/${date}`;
+  const [storageResult, dbResult] = await Promise.all([
+    supabase.storage.from("photos").remove([path]),
+    supabase.from("photos").delete().eq("user_id", userId).eq("date", date),
+  ]);
+  if (storageResult.error) throw storageResult.error;
+  if (dbResult.error) throw dbResult.error;
+}
+
 export async function getPhotosInRange(
   userId: string,
   startDate: string,
@@ -262,7 +272,10 @@ export async function getPhotosInRange(
 }
 
 // Profile
-export async function updateProfile(userId: string, updates: Partial<UserProfile>) {
+export async function updateProfile(
+  userId: string,
+  updates: Partial<Omit<UserProfile, "dailyCalorieGoal">> & { dailyCalorieGoal?: number | null }
+) {
   const row: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -276,6 +289,8 @@ export async function updateProfile(userId: string, updates: Partial<UserProfile
   if (updates.goal !== undefined) row.goal = updates.goal;
   if (updates.dailyProteinGoal !== undefined)
     row.daily_protein_goal = updates.dailyProteinGoal;
+  if ("dailyCalorieGoal" in updates)
+    row.daily_calorie_goal = updates.dailyCalorieGoal;
 
   const { error } = await supabase
     .from("profiles")

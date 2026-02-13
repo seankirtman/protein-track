@@ -12,7 +12,7 @@ export function JournalCard({ children, className = "", title }: JournalCardProp
       className={`rounded-lg border-2 border-leather/30 bg-white/80 p-6 shadow-journal ${className}`}
     >
       {title && (
-        <h2 className="mb-4 font-heading text-lg font-bold text-ink border-b border-leather/20 pb-2">
+        <h2 className="mb-2 sm:mb-4 font-heading text-sm sm:text-lg font-bold text-ink border-b border-leather/20 pb-1.5 sm:pb-2">
           {title}
         </h2>
       )}

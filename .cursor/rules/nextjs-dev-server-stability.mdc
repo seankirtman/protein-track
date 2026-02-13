@@ -1,0 +1,35 @@
+---
+description: Prevent Next.js localhost errors by cleaning stale processes and cache
+alwaysApply: true
+---
+
+# Next.js Dev Server Stability
+
+When localhost errors, endless loading, 500s, or webpack/cache errors occur:
+
+1. **Kill stale dev processes** — Multiple `next dev` instances corrupt the build
+2. **Clear the `.next` cache** — Corrupted webpack cache causes ENOENT and cascading failures
+3. **Restart with a single dev server**
+
+## Recovery Commands
+
+```bash
+# Kill all Next.js dev processes
+pkill -f "next dev"
+
+# Clear cache and restart
+rm -rf .next
+npm run dev
+```
+
+## Before Starting `npm run dev`
+
+- Check if ports 3000, 3001, 3002 are in use: `lsof -ti :3000,:3001,:3002`
+- Kill any stale node/next processes before starting a new dev server
+- If the user reports localhost not loading or erroring: run the recovery commands above first
+
+## Common Error Patterns
+
+- `ENOENT: no such file or directory` for `.next/cache/` or `fallback-build-manifest.json` → delete `.next`
+- `Port 3000 is in use, trying 3001` → multiple dev servers; kill them and restart on 3000
+- `Caching failed for pack` → corrupted webpack cache; delete `.next`

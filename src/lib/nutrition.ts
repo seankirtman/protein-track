@@ -53,3 +53,9 @@ export function estimateCaloriesFromProfile(profile: UserProfile | null): number
     profile.goal
   ) ?? undefined;
 }
+
+/** Returns override if set, otherwise estimated calorie goal */
+export function getCalorieGoal(profile: UserProfile | null): number | undefined {
+  if (profile?.dailyCalorieGoal != null) return profile.dailyCalorieGoal;
+  return estimateCaloriesFromProfile(profile) ?? undefined;
+}

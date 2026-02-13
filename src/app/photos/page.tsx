@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
 import {
@@ -8,6 +9,7 @@ import {
   getPhotosInRange,
   uploadPhoto,
   savePhoto,
+  deletePhoto,
 } from "@/lib/database";
 import { compressPhoto } from "@/lib/photoUtils";
 import type { PhotoEntry } from "@/types";
@@ -37,6 +39,7 @@ export default function PhotosPage() {
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [webcamReady, setWebcamReady] = useState(false);
   const [webcamError, setWebcamError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isMobile =
     typeof navigator !== "undefined" &&
@@ -212,6 +215,22 @@ export default function PhotosPage() {
     }
   };
 
+  const handleDeletePhoto = async () => {
+    if (!user || !photo) return;
+    if (!confirm("Delete this photo? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await deletePhoto(user.id, dateStr);
+      setPhoto(null);
+      setGallery((prev) => prev.filter((p) => p.date !== dateStr));
+      if (compareDate === dateStr) setCompareDate(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const goPrevDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
@@ -235,25 +254,28 @@ export default function PhotosPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <JournalCard>
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="mx-auto max-w-2xl px-2 py-3 sm:px-4 sm:py-8">
+      <Link href="/" className="inline-flex items-center gap-1 text-xs sm:text-sm text-ink/50 hover:text-rust mb-2 sm:mb-3 px-1">
+        ← Dashboard
+      </Link>
+      <JournalCard className="!p-3 sm:!p-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={goPrevDay}
-              className="rounded px-3 py-1 text-ink/70 hover:bg-aged/50"
+              className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"
             >
               ←
             </button>
-            <h1 className="font-heading text-xl font-bold text-ink">
+            <h1 className="font-heading text-base sm:text-xl font-bold text-ink">
               {formatShortDate(selectedDate)}
               {isToday && (
-                <span className="ml-2 text-sm font-normal text-rust">Today</span>
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-rust">Today</span>
               )}
             </h1>
             <button
               onClick={goNextDay}
-              className="rounded px-3 py-1 text-ink/70 hover:bg-aged/50"
+              className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"
             >
               →
             </button>
@@ -291,20 +313,27 @@ export default function PhotosPage() {
             {captureError && (
               <p className="text-sm text-red-600">{captureError}</p>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleTakePhoto}
                 disabled={uploading}
-                className="rounded bg-rust px-4 py-2 text-white hover:bg-rust/90 disabled:opacity-50"
+                className="rounded bg-rust px-4 py-2 text-sm sm:text-base text-white hover:bg-rust/90 disabled:opacity-50"
               >
                 {uploading ? "Uploading…" : "Replace photo"}
               </button>
               <button
                 onClick={() => galleryInputRef.current?.click()}
                 disabled={uploading}
-                className="rounded border border-rust px-4 py-2 text-rust hover:bg-rust/10 disabled:opacity-50"
+                className="rounded border border-rust px-4 py-2 text-sm sm:text-base text-rust hover:bg-rust/10 disabled:opacity-50"
               >
                 Choose from library
+              </button>
+              <button
+                onClick={handleDeletePhoto}
+                disabled={deleting}
+                className="rounded border border-red-300 px-4 py-2 text-sm sm:text-base text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                {deleting ? "Deleting…" : "Delete photo"}
               </button>
             </div>
           </div>
@@ -353,13 +382,13 @@ export default function PhotosPage() {
           </div>
         )}
 
-        <div className="mt-8">
-          <div className="mb-3 flex items-center justify-between">
+        <div className="mt-6 sm:mt-8">
+          <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h3 className="font-heading font-bold text-ink">
+              <h3 className="font-heading text-sm sm:text-base font-bold text-ink">
                 Compare photos
               </h3>
-              <p className="text-xs text-ink/50">
+              <p className="text-[10px] sm:text-xs text-ink/50">
                 Tap a recent photo or pick a date
               </p>
             </div>
@@ -371,7 +400,7 @@ export default function PhotosPage() {
                 onChange={(e) =>
                   setCompareDate(e.target.value || null)
                 }
-                className="rounded border border-leather/30 bg-paper px-2 py-1 text-sm text-ink focus:border-rust focus:outline-none"
+                className="rounded border border-leather/30 bg-paper px-2 py-1 text-xs sm:text-sm text-ink focus:border-rust focus:outline-none"
               />
               {compareDate && (
                 <button
@@ -440,9 +469,9 @@ export default function PhotosPage() {
         </div>
 
         {compareDate && (
-          <div className="mt-8 grid grid-cols-2 gap-4">
+          <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2 sm:gap-4">
             <div>
-              <p className="mb-2 text-sm font-medium text-ink">
+              <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
                 {formatShortDate(selectedDate)}
               </p>
               {photo?.photoURL && (
@@ -458,7 +487,7 @@ export default function PhotosPage() {
               )}
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-ink">
+              <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
                 {formatShortDate(new Date(compareDate + "T12:00:00"))}
               </p>
               {comparePhoto?.photoURL ? (
@@ -489,8 +518,8 @@ export default function PhotosPage() {
 
       {/* Webcam capture modal */}
       {webcamOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="relative w-full max-w-lg rounded-lg bg-paper p-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-lg rounded-t-xl sm:rounded-lg bg-paper p-4 shadow-xl">
             <h3 className="mb-3 font-heading text-lg font-bold text-ink">
               Take a photo
             </h3>
