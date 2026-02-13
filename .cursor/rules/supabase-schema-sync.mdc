@@ -1,0 +1,32 @@
+---
+description: Ensure Supabase database schema stays in sync when frontend data types change
+globs: src/types/index.ts, src/lib/database.ts, src/app/profile/**
+alwaysApply: false
+---
+
+# Supabase Schema Sync
+
+When modifying data structures on the frontend, **always check and update the corresponding Supabase backend**:
+
+1. **Types changed?** → Check if the Supabase table has CHECK constraints, enums, or column types that need updating
+2. **New field added?** → Add the column to the Supabase table and update `database.ts` mapping functions
+3. **Enum/union values changed?** → Update CHECK constraints in Supabase via SQL and the migration file
+
+## Checklist for data model changes
+
+- [ ] Update TypeScript types in `src/types/index.ts`
+- [ ] Update `src/lib/database.ts` (row mappers, CRUD functions)
+- [ ] Update migration file in `supabase/migrations/`
+- [ ] Provide SQL for the user to run in Supabase SQL Editor (production DB)
+- [ ] Verify frontend form inputs match the new allowed values
+
+## Example: Adding new enum values to `goal`
+
+```sql
+-- Run in Supabase SQL Editor
+ALTER TABLE profiles DROP CONSTRAINT profiles_goal_check;
+ALTER TABLE profiles ADD CONSTRAINT profiles_goal_check
+  CHECK (goal IN ('lean_bulk', 'bulk', 'aggressive_bulk', 'maintain', 'cut', 'aggressive_cut'));
+```
+
+Then update `supabase/migrations/001_initial_schema.sql` to match.
