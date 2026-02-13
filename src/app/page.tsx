@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { estimateCaloriesFromProfile } from "@/lib/nutrition";
+import type { UserProfile } from "@/types";
 
 function formatDate(date: Date) {
   return date.toLocaleDateString("en-US", {
@@ -146,6 +148,7 @@ export default function DashboardPage() {
           <DashboardStats
             userId={user.id}
             proteinGoal={profile?.dailyProteinGoal ?? 150}
+            calorieGoal={estimateCaloriesFromProfile(profile)}
           />
         </JournalCard>
 

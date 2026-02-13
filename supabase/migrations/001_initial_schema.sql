@@ -36,6 +36,7 @@ create table nutrition (
   protein_goal numeric default 150,
   foods jsonb default '[]',
   total_protein numeric default 0,
+  total_calories numeric default 0,
   ai_recommendations jsonb default '[]',
   created_at timestamptz default now(),
   updated_at timestamptz default now(),

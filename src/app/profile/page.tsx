@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
 import { updateProfile } from "@/lib/database";
+import { estimateCalories } from "@/lib/nutrition";
 
 const GOAL_LABELS: Record<string, string> = {
   aggressive_bulk: "Aggressive Bulk",
@@ -87,49 +88,6 @@ function getProteinNote(
   return `${goalLabel}:${heightNote} aim for ${low}–${high}g of protein daily to ${goalReason}. ${activityNote} Protein is the most critical macronutrient for body recomposition — it repairs muscle fibers, keeps you satiated, and has the highest thermic effect of any macro.`;
 }
 
-function estimateCalories(
-  weightLbs: number | undefined,
-  heightIn: number | undefined,
-  ageSt: string,
-  activity: string,
-  goal: string
-): number | null {
-  if (!weightLbs) return null;
-
-  // Mifflin-St Jeor (uses metric)
-  const weightKg = weightLbs * 0.453592;
-  const heightCm = heightIn ? heightIn * 2.54 : 170; // default 170cm if unknown
-  const ageNum = parseInt(ageSt) || 25; // default 25 if unknown
-
-  // BMR (using male formula as default; close enough for estimation)
-  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageNum + 5;
-
-  // Activity multiplier
-  let activityMult = 1.55; // moderate default
-  switch (activity) {
-    case "sedentary": activityMult = 1.2; break;
-    case "light": activityMult = 1.375; break;
-    case "moderate": activityMult = 1.55; break;
-    case "active": activityMult = 1.725; break;
-    case "very_active": activityMult = 1.9; break;
-  }
-
-  const tdee = bmr * activityMult;
-
-  // Goal adjustment
-  let goalAdj = 0;
-  switch (goal) {
-    case "aggressive_bulk": goalAdj = 500; break;
-    case "bulk": goalAdj = 300; break;
-    case "lean_bulk": goalAdj = 150; break;
-    case "maintain": goalAdj = 0; break;
-    case "cut": goalAdj = -300; break;
-    case "aggressive_cut": goalAdj = -500; break;
-  }
-
-  return Math.round(tdee + goalAdj);
-}
-
 const ACTIVITY_LABELS: Record<string, string> = {
   sedentary: "Sedentary",
   light: "Light",
@@ -150,8 +108,8 @@ export default function ProfilePage() {
   const [heightFeet, setHeightFeet] = useState("");
   const [heightInches, setHeightInches] = useState("");
   const [age, setAge] = useState("");
-  const [activityLevel, setActivityLevel] = useState("moderate");
-  const [goal, setGoal] = useState<string>("maintain");
+  const [activityLevel, setActivityLevel] = useState<"sedentary" | "light" | "moderate" | "active" | "very_active">("moderate");
+  const [goal, setGoal] = useState<"lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut">("maintain");
   const [proteinGoal, setProteinGoal] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiReasoning, setAiReasoning] = useState("");
@@ -318,7 +276,7 @@ export default function ProfilePage() {
               const cal = estimateCalories(
                 profile?.weight,
                 profile?.height,
-                (profile?.age ?? "").toString(),
+                profile?.age,
                 profile?.activityLevel ?? "moderate",
                 profile?.goal ?? "maintain"
               );
@@ -400,7 +358,7 @@ export default function ProfilePage() {
                 <label className="block text-sm text-ink/70">Activity level</label>
                 <select
                   value={activityLevel}
-                  onChange={(e) => setActivityLevel(e.target.value)}
+                  onChange={(e) => setActivityLevel(e.target.value as "sedentary" | "light" | "moderate" | "active" | "very_active")}
                   className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
                 >
                   <option value="sedentary">Sedentary</option>
@@ -414,7 +372,7 @@ export default function ProfilePage() {
                 <label className="block text-sm text-ink/70">Goal</label>
                 <select
                   value={goal}
-                  onChange={(e) => setGoal(e.target.value)}
+                  onChange={(e) => setGoal(e.target.value as "lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut")}
                   className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
                 >
                   <option value="aggressive_bulk">Aggressive Bulk — max muscle gain, high surplus</option>
@@ -464,7 +422,7 @@ export default function ProfilePage() {
               const cal = estimateCalories(
                 weight ? parseFloat(weight) : undefined,
                 totalHeightInches,
-                age,
+                age ? parseInt(age) : undefined,
                 activityLevel,
                 goal ?? "maintain"
               );

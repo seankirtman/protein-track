@@ -38,11 +38,12 @@ export function useNutrition(
           proteinGoal,
           foods: [],
           totalProtein: 0,
+          totalCalories: 0,
         });
       }
     } catch (err) {
       console.error(err);
-      setDay({ date: dateStr, proteinGoal, foods: [], totalProtein: 0 });
+      setDay({ date: dateStr, proteinGoal, foods: [], totalProtein: 0, totalCalories: 0 });
     } finally {
       setLoading(false);
       initialLoadDone.current = true;
@@ -87,7 +88,8 @@ export function useNutrition(
         if (!prev) return null;
         const foods = [...prev.foods, newFood];
         const totalProtein = foods.reduce((s, f) => s + f.protein, 0);
-        return { ...prev, foods, totalProtein };
+        const totalCalories = foods.reduce((s, f) => s + (f.calories ?? 0), 0);
+        return { ...prev, foods, totalProtein, totalCalories };
       });
     },
     []
@@ -98,7 +100,8 @@ export function useNutrition(
       if (!prev) return null;
       const foods = prev.foods.filter((f) => f.id !== id);
       const totalProtein = foods.reduce((s, f) => s + f.protein, 0);
-      return { ...prev, foods, totalProtein };
+      const totalCalories = foods.reduce((s, f) => s + (f.calories ?? 0), 0);
+      return { ...prev, foods, totalProtein, totalCalories };
     });
   }, []);
 
@@ -109,7 +112,8 @@ export function useNutrition(
         f.id === id ? { ...f, ...updates } : f
       );
       const totalProtein = foods.reduce((s, f) => s + f.protein, 0);
-      return { ...prev, foods, totalProtein };
+      const totalCalories = foods.reduce((s, f) => s + (f.calories ?? 0), 0);
+      return { ...prev, foods, totalProtein, totalCalories };
     });
   }, []);
 

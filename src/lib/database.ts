@@ -55,11 +55,13 @@ function workoutToRow(workout: Workout) {
 }
 
 function nutritionFromRow(row: Record<string, unknown>): NutritionDay {
+  const foods = (row.foods as FoodEntry[]) ?? [];
   return {
     date: row.date as string,
     proteinGoal: Number(row.protein_goal ?? 150),
-    foods: (row.foods as FoodEntry[]) ?? [],
+    foods,
     totalProtein: Number(row.total_protein ?? 0),
+    totalCalories: Number(row.total_calories ?? 0) || foods.reduce((s, f) => s + (f.calories ?? 0), 0),
     aiRecommendations: (row.ai_recommendations as string[]) ?? [],
   };
 }
@@ -70,6 +72,7 @@ function nutritionToRow(day: NutritionDay) {
     protein_goal: day.proteinGoal,
     foods: day.foods,
     total_protein: day.totalProtein,
+    total_calories: day.totalCalories,
     ai_recommendations: day.aiRecommendations ?? [],
   };
 }

@@ -5,10 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNutrition } from "@/hooks/useNutrition";
 import { JournalCard } from "@/components/layout/JournalCard";
 import { ProteinProgressBar } from "@/components/nutrition/ProteinProgressBar";
+import { CalorieTracker } from "@/components/nutrition/CalorieTracker";
 import { ShortfallAlert } from "@/components/nutrition/ShortfallAlert";
 import { FoodRecommendations } from "@/components/nutrition/FoodRecommendations";
 import { FoodSearch } from "@/components/nutrition/FoodSearch";
 import { getFoodNames } from "@/lib/database";
+import { estimateCaloriesFromProfile } from "@/lib/nutrition";
 import type { FoodEntry } from "@/types";
 
 function dateKey(d: Date) {
@@ -34,6 +36,7 @@ function EditableFoodRow({
   const [name, setName] = useState(food.name);
   const [quantity, setQuantity] = useState(food.quantity ?? "");
   const [protein, setProtein] = useState(food.protein.toString());
+  const [calories, setCalories] = useState((food.calories ?? 0).toString());
   const isEaten = food.eaten ?? false;
 
   const handleSave = () => {
@@ -41,6 +44,7 @@ function EditableFoodRow({
       name: name.trim() || food.name,
       quantity: quantity.trim() || undefined,
       protein: parseFloat(protein) || 0,
+      calories: parseFloat(calories) || undefined,
     });
     setEditing(false);
   };
@@ -50,6 +54,7 @@ function EditableFoodRow({
       setName(food.name);
       setQuantity(food.quantity ?? "");
       setProtein(food.protein.toString());
+      setCalories((food.calories ?? 0).toString());
       setEditing(false);
     }
   };
@@ -75,6 +80,9 @@ function EditableFoodRow({
             autoFocus
             onKeyDown={handleKeyDown}
           />
+        </div>
+        <div className="flex gap-2 items-center">
+          <label className="text-xs text-ink/40">Protein</label>
           <input
             type="number"
             min={0}
@@ -84,7 +92,18 @@ function EditableFoodRow({
             className="w-16 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
-          <span className="flex items-center text-xs text-ink/40">g</span>
+          <span className="text-xs text-ink/40">g</span>
+          <label className="text-xs text-ink/40 ml-2">Cal</label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={calories}
+            onChange={(e) => setCalories(e.target.value)}
+            className="w-16 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+            onKeyDown={handleKeyDown}
+          />
+          <span className="text-xs text-ink/40">kcal</span>
         </div>
         <div className="flex gap-2">
           <button
@@ -98,6 +117,7 @@ function EditableFoodRow({
               setName(food.name);
               setQuantity(food.quantity ?? "");
               setProtein(food.protein.toString());
+              setCalories((food.calories ?? 0).toString());
               setEditing(false);
             }}
             className="rounded px-3 py-1 text-xs text-ink/70 hover:bg-aged/50"
@@ -141,13 +161,20 @@ function EditableFoodRow({
         {food.quantity ? `${food.quantity} × ${food.name}` : food.name}
       </button>
       <div className="flex items-center gap-2">
-        <span
-          className={`font-mono text-sm ${
-            isEaten ? "text-green-600" : "text-rust/50"
-          }`}
-        >
-          {food.protein}g
-        </span>
+        <div className="text-right">
+          <span
+            className={`font-mono text-sm ${
+              isEaten ? "text-green-600" : "text-rust/50"
+            }`}
+          >
+            {food.protein}g
+          </span>
+          {food.calories ? (
+            <span className={`block font-mono text-xs ${isEaten ? "text-green-500/70" : "text-ink/40"}`}>
+              {food.calories} cal
+            </span>
+          ) : null}
+        </div>
         <button
           onClick={() => onRemove(food.id)}
           className="text-ink/50 hover:text-red-600"
@@ -167,6 +194,7 @@ export default function NutritionPage() {
   const [newFoodName, setNewFoodName] = useState("");
   const [newFoodQuantity, setNewFoodQuantity] = useState("");
   const [newFoodProtein, setNewFoodProtein] = useState("");
+  const [newFoodCalories, setNewFoodCalories] = useState("");
   const [estimating, setEstimating] = useState(false);
   const [foodHistory, setFoodHistory] = useState<string[]>([]);
   const {
@@ -201,16 +229,23 @@ export default function NutritionPage() {
     ?.filter((f) => f.eaten)
     .reduce((s, f) => s + f.protein, 0) ?? 0;
   const totalProtein = day?.totalProtein ?? 0;
+  const eatenCalories = day?.foods
+    ?.filter((f) => f.eaten)
+    .reduce((s, f) => s + (f.calories ?? 0), 0) ?? 0;
+  const totalCalories = day?.totalCalories ?? 0;
+  const calorieGoal = estimateCaloriesFromProfile(profile) ?? 2000;
 
   const handleAddFood = () => {
     const name = newFoodName.trim();
     const quantity = newFoodQuantity.trim() || undefined;
     const protein = parseFloat(newFoodProtein) || 0;
+    const calories = parseFloat(newFoodCalories) || 0;
     if (name) {
-      addFood({ name, quantity, protein });
+      addFood({ name, quantity, protein, calories: calories || undefined });
       setNewFoodName("");
       setNewFoodQuantity("");
       setNewFoodProtein("");
+      setNewFoodCalories("");
       setShowAddFood(false);
     }
   };
@@ -232,17 +267,20 @@ export default function NutritionPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setNewFoodProtein(data.protein?.toString() ?? "0");
+      setNewFoodCalories(data.calories?.toString() ?? "0");
     } catch {
       setNewFoodProtein("");
+      setNewFoodCalories("");
     } finally {
       setEstimating(false);
     }
   }, []);
 
-  // Auto-estimate protein when food name or quantity changes
+  // Auto-estimate protein & calories when food name or quantity changes
   useEffect(() => {
     if (!newFoodName.trim()) {
       setNewFoodProtein("");
+      setNewFoodCalories("");
       return;
     }
     if (estimateTimer.current) clearTimeout(estimateTimer.current);
@@ -263,6 +301,7 @@ export default function NutritionPage() {
     setNewFoodName("");
     setNewFoodQuantity("");
     setNewFoodProtein("");
+    setNewFoodCalories("");
   };
 
   const goPrevDay = () => {
@@ -327,6 +366,11 @@ export default function NutritionPage() {
             goal={day?.proteinGoal ?? 150}
             size="lg"
           />
+          <CalorieTracker
+            eaten={eatenCalories}
+            goal={calorieGoal}
+            planned={totalCalories}
+          />
         </div>
 
         {isToday && (
@@ -382,7 +426,7 @@ export default function NutritionPage() {
                     placeholder="Food name (e.g. Eggs)"
                   />
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-ink/50">Protein</label>
                     <input
@@ -401,6 +445,25 @@ export default function NutritionPage() {
                       className={`w-28 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
                     />
                     <span className="text-xs text-ink/40">g</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-ink/50">Calories</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={newFoodCalories}
+                      onChange={(e) => {
+                        setNewFoodCalories(e.target.value);
+                        if (estimating) {
+                          setEstimating(false);
+                          if (estimateTimer.current) clearTimeout(estimateTimer.current);
+                        }
+                      }}
+                      placeholder={estimating ? "estimating…" : ""}
+                      className={`w-28 rounded border border-leather/30 px-2 py-2 font-mono text-ink ${estimating ? "text-xs placeholder:text-xs" : "text-sm"}`}
+                    />
+                    <span className="text-xs text-ink/40">kcal</span>
                   </div>
                   <div className="flex gap-2 ml-auto">
                     <button

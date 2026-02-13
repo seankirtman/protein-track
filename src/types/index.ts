@@ -49,6 +49,7 @@ export interface NutritionDay {
   proteinGoal: number;
   foods: FoodEntry[];
   totalProtein: number;
+  totalCalories: number;
   aiRecommendations?: string[];
 }
 
