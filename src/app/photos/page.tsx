@@ -40,6 +40,7 @@ export default function PhotosPage() {
   const [webcamReady, setWebcamReady] = useState(false);
   const [webcamError, setWebcamError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
 
   const isMobile =
     typeof navigator !== "undefined" &&
@@ -69,6 +70,7 @@ export default function PhotosPage() {
         ]);
         setPhoto(photoData);
         setGallery(galleryData);
+        setMainImageLoaded(false);
       } catch (err) {
         console.error(err);
       } finally {
@@ -100,6 +102,7 @@ export default function PhotosPage() {
       };
       await savePhoto(user.id, entry);
       setPhoto(entry);
+      setMainImageLoaded(false);
       setGallery((prev) => {
         const filtered = prev.filter((p) => p.date !== dateStr);
         return [entry, ...filtered];
@@ -185,6 +188,7 @@ export default function PhotosPage() {
       const entry: PhotoEntry = { id: dateStr, date: dateStr, photoURL: url };
       await savePhoto(user.id, entry);
       setPhoto(entry);
+      setMainImageLoaded(false);
       setGallery((prev) => {
         const filtered = prev.filter((p) => p.date !== dateStr);
         return [entry, ...filtered];
@@ -288,13 +292,15 @@ export default function PhotosPage() {
           <div className="aspect-square animate-pulse rounded bg-aged/20" />
         ) : photo?.photoURL ? (
           <div className="space-y-4">
-            <div className="relative aspect-square overflow-hidden rounded border-2 border-leather/30">
+            <div className="relative aspect-square overflow-hidden rounded border-2 border-leather/30 bg-aged/20">
               <Image
                 src={photo.photoURL}
                 alt={`Photo for ${dateStr}`}
                 fill
-                className="object-cover"
+                className={`object-cover transition-opacity duration-300 ${mainImageLoaded ? "opacity-100" : "opacity-0"}`}
                 unoptimized
+                onLoad={() => setMainImageLoaded(true)}
+                sizes="(max-width: 640px) 100vw, 672px"
               />
             </div>
             <input
