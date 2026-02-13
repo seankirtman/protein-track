@@ -110,19 +110,22 @@ export default function JournalPage() {
     }
   };
 
-  const handleShowImage = async (e: React.MouseEvent) => {
+  const handleShowImage = async (e: React.MouseEvent, forceRefresh = false) => {
     e.preventDefault();
     e.stopPropagation();
     if (!infoModal || imageLoading) return;
     setImageLoading(true);
     setImageError(null);
-    const name = infoModal.name;
-    const steps = infoModal.steps;
+    if (forceRefresh) {
+      setInfoModal((prev) => (prev ? { ...prev, imageDataUrl: undefined } : null));
+    }
+    const name = infoModal!.name;
+    const steps = infoModal!.steps;
     try {
       const res = await fetch("/api/ai/exercise-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exerciseName: name, steps }),
+        body: JSON.stringify({ exerciseName: name, steps, forceRefresh }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -438,12 +441,22 @@ export default function JournalPage() {
                 )}
               </div>
             ) : (
-              <div className="rounded-lg overflow-hidden border border-leather/30 bg-aged/20">
-                <img
-                  src={infoModal.imageDataUrl}
-                  alt={`Illustration of ${infoModal.name}`}
-                  className="w-full h-auto max-h-64 object-contain"
-                />
+              <div className="space-y-2">
+                <div className="rounded-lg overflow-hidden border border-leather/30 bg-aged/20">
+                  <img
+                    src={infoModal.imageDataUrl}
+                    alt={`Illustration of ${infoModal.name}`}
+                    className="w-full h-auto max-h-64 object-contain"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleShowImage(e, true)}
+                  disabled={imageLoading}
+                  className="text-xs text-ink/60 hover:text-rust hover:underline"
+                >
+                  Regenerate image
+                </button>
               </div>
             )}
           </div>

@@ -7,12 +7,13 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 interface RequestBody {
   exerciseName: string;
   steps: string[];
+  forceRefresh?: boolean;
 }
 
 export async function POST(req: Request) {
   try {
     const body: RequestBody = await req.json();
-    const { exerciseName, steps } = body;
+    const { exerciseName, steps, forceRefresh } = body;
 
     if (!exerciseName || typeof exerciseName !== "string" || !exerciseName.trim()) {
       return NextResponse.json(
@@ -22,20 +23,22 @@ export async function POST(req: Request) {
     }
 
     const nameKey = exerciseCacheKey(exerciseName.trim());
-    try {
-      const cached = await getExerciseCache(nameKey);
-      if (cached?.imageDataUrl) {
-        return NextResponse.json({ imageDataUrl: cached.imageDataUrl });
+    if (!forceRefresh) {
+      try {
+        const cached = await getExerciseCache(nameKey);
+        if (cached?.imageDataUrl) {
+          return NextResponse.json({ imageDataUrl: cached.imageDataUrl });
+        }
+      } catch (cacheErr) {
+        console.warn("exercise-image: cache lookup failed", cacheErr);
       }
-    } catch (cacheErr) {
-      console.warn("exercise-image: cache lookup failed", cacheErr);
     }
 
     const stepsList = Array.isArray(steps)
       ? steps.filter((s) => typeof s === "string" && s.trim()).slice(0, 3)
       : [];
 
-    // Use LLM to turn steps into a precise visual prompt so the image matches the instructions
+    // Use LLM to turn steps into a precise visual prompt for WorkoutLabs-style two-panel diagram
     let imagePrompt: string;
     if (stepsList.length > 0) {
       const chat = await openai.chat.completions.create({
@@ -43,36 +46,54 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content: `You create short image-generation prompts for DALL-E. Given an exercise name and its how-to steps, output a single 1-2 sentence description that precisely captures the key VISUAL elements: body position, equipment placement, and what distinguishes this exercise from similar ones. Be specific about pose (e.g. "bent forward at hips" vs "standing upright", "bar in hands hanging down" vs "bar on upper back"). Output ONLY the prompt text, no other text.`,
+            content: `You create DALL-E prompts for fitness instructional diagrams. Given an exercise and its steps, describe exactly what the image must show. CRITICAL: Output a description for a TWO-PANEL image (two illustrations side by side) showing the main phases: panel 1 = starting/extended position, panel 2 = contracted/peak position. Be extremely specific about body posture (e.g. "bent forward at hips, torso at 45 degrees" NOT "standing upright"), equipment position, and what makes this exercise visually distinct. Never describe a generic standing pose if the exercise requires bending, hinging, or another position. Output ONLY the prompt text, no other text.`,
           },
           {
             role: "user",
-            content: `Exercise: "${exerciseName.trim()}"\nSteps:\n${stepsList.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nWrite the image prompt:`,
+            content: `Exercise: "${exerciseName.trim()}"\nSteps:\n${stepsList.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nWrite the two-panel image prompt:`,
           },
         ],
       });
-      imagePrompt = (chat.choices[0]?.message?.content?.trim() || "").replace(/^["']|["']$/g, "") || `Person performing ${exerciseName.trim()} with correct form.`;
+      imagePrompt = (chat.choices[0]?.message?.content?.trim() || "").replace(/^["']|["']$/g, "") || `Person performing ${exerciseName.trim()} with correct form in two panels.`;
     } else {
-      imagePrompt = `Person performing ${exerciseName.trim()} with correct form.`;
+      imagePrompt = `Person performing ${exerciseName.trim()} with correct form in two panels.`;
     }
 
-    const fullPrompt = `Clear instructional fitness illustration. ${imagePrompt} Simple, clean diagram or figure drawing style. White or light neutral background. No text in the image.`;
+    const fullPrompt = `Professional fitness instructional diagram in WorkoutLabs style. Two side-by-side panels: left panel shows starting position, right panel shows contracted position. ${imagePrompt} Clean vector-style figure illustrations, grayscale or simple colors, white background. No text or watermarks. The image MUST accurately show the exercise position described.`;
 
-    const imageResponse = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: fullPrompt,
-      size: "1024x1024",
-      n: 1,
-      response_format: "b64_json",
-      style: "natural",
-    });
+    let imageDataUrl: string | null = null;
 
-    const b64 = imageResponse.data[0]?.b64_json;
-    if (!b64) {
+    const tryGenerate = async (prompt: string, size: "1792x1024" | "1024x1024" = "1792x1024") => {
+      const res = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        size,
+        n: 1,
+        response_format: "b64_json",
+        style: "natural",
+      });
+      const b64 = res.data[0]?.b64_json;
+      if (b64) return `data:image/png;base64,${b64}`;
+      return null;
+    };
+
+    try {
+      imageDataUrl = await tryGenerate(fullPrompt);
+    } catch (firstErr) {
+      console.warn("exercise-image: primary generation failed, trying fallback", firstErr);
+      // Fallback: simpler, more abstract prompt to avoid content policy rejections
+      const fallbackPrompt = `Simple educational fitness diagram. Two panels side by side. Left: schematic figure in starting position for "${exerciseName.trim()}". Right: same figure in end position. Clean line art, white background, instructional style like a textbook illustration. No text.`;
+      try {
+        imageDataUrl = await tryGenerate(fallbackPrompt, "1024x1024");
+      } catch (fallbackErr) {
+        console.error("exercise-image: fallback also failed", fallbackErr);
+        throw firstErr;
+      }
+    }
+
+    if (!imageDataUrl) {
       throw new Error("No image data returned");
     }
-
-    const imageDataUrl = `data:image/png;base64,${b64}`;
 
     try {
       await upsertExerciseCache(nameKey, { imageDataUrl });
@@ -83,8 +104,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ imageDataUrl });
   } catch (err) {
     console.error("exercise-image error:", err);
+    const message = err instanceof Error ? err.message : "Failed to generate exercise image";
     return NextResponse.json(
-      { error: "Failed to generate exercise image" },
+      { error: message },
       { status: 500 }
     );
   }
