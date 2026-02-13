@@ -67,12 +67,21 @@ function nutritionFromRow(row: Record<string, unknown>): NutritionDay {
 }
 
 function nutritionToRow(day: NutritionDay) {
+  const foods = (day.foods ?? []).map((f) => ({
+    id: f.id,
+    name: String(f.name ?? ""),
+    quantity: f.quantity ?? undefined,
+    protein: Number.isFinite(f.protein) ? f.protein : 0,
+    calories: f.calories != null && Number.isFinite(f.calories) ? f.calories : undefined,
+    time: f.time ?? undefined,
+    eaten: f.eaten ?? undefined,
+  }));
   return {
     date: day.date,
-    protein_goal: day.proteinGoal,
-    foods: day.foods,
-    total_protein: day.totalProtein,
-    total_calories: day.totalCalories,
+    protein_goal: Number.isFinite(day.proteinGoal) ? day.proteinGoal : 150,
+    foods,
+    total_protein: Number.isFinite(day.totalProtein) ? day.totalProtein : 0,
+    total_calories: Number.isFinite(day.totalCalories) ? day.totalCalories : 0,
     ai_recommendations: day.aiRecommendations ?? [],
   };
 }
@@ -256,11 +265,55 @@ export async function getNutritionDay(
 
 export async function saveNutritionDay(userId: string, day: NutritionDay) {
   const row = nutritionToRow(day);
-  const { error } = await supabase.from("nutrition").upsert(
-    { user_id: userId, ...row, updated_at: new Date().toISOString() },
-    { onConflict: "user_id,date" }
-  );
-  if (error) throw error;
+  const payload = {
+    user_id: userId,
+    ...row,
+    updated_at: new Date().toISOString(),
+  };
+
+  const trySave = async (savePayload: Record<string, unknown>) => {
+    // Avoid PostgREST on_conflict edge cases by using update -> insert fallback.
+    const { data: updated, error: updateError } = await supabase
+      .from("nutrition")
+      .update(savePayload)
+      .eq("user_id", userId)
+      .eq("date", row.date)
+      .select("id")
+      .limit(1);
+    if (updateError) throw updateError;
+
+    if ((updated?.length ?? 0) > 0) return;
+
+    const { error: insertError } = await supabase.from("nutrition").insert(savePayload);
+    if (!insertError) return;
+
+    // If another save inserted concurrently, retry update once.
+    if ((insertError as { code?: string }).code === "23505") {
+      const { error: retryUpdateError } = await supabase
+        .from("nutrition")
+        .update(savePayload)
+        .eq("user_id", userId)
+        .eq("date", row.date);
+      if (retryUpdateError) throw retryUpdateError;
+      return;
+    }
+
+    throw insertError;
+  };
+
+  try {
+    await trySave(payload as Record<string, unknown>);
+  } catch (err) {
+    const e = err as { code?: string; message?: string };
+    const missingCaloriesColumn =
+      e?.code === "PGRST204" && (e.message ?? "").includes("total_calories");
+    if (!missingCaloriesColumn) throw err;
+
+    // Backward compatibility for DBs that haven't added nutrition.total_calories yet.
+    const { total_calories: _ignored, ...legacyPayload } =
+      payload as Record<string, unknown>;
+    await trySave(legacyPayload);
+  }
 }
 
 // Photos

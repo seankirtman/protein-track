@@ -69,7 +69,8 @@ export function useNutrition(
         await saveNutritionDay(userId, day);
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
-      } catch {
+      } catch (err) {
+        console.error("Nutrition save failed:", err);
         setSaveStatus("error");
         setTimeout(() => setSaveStatus("idle"), 3000);
       }
@@ -136,7 +137,8 @@ export function useNutrition(
     try {
       await saveNutritionDay(userId, currentDay);
       setSaveStatus("saved");
-    } catch {
+    } catch (err) {
+      console.error("Nutrition flush save failed:", err);
       setSaveStatus("error");
     }
     setTimeout(() => setSaveStatus("idle"), 1500);
