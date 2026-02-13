@@ -20,6 +20,8 @@ export function useNutrition(
   const proteinGoal = profileProteinGoal ?? 150;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
+  const dayRef = useRef<NutritionDay | null>(null);
+  dayRef.current = day;
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -121,6 +123,24 @@ export function useNutrition(
     });
   }, []);
 
+  /** Flush pending save immediately (for use before date navigation). Uses ref to get latest day after blur-triggered updates. */
+  const flushSave = useCallback(async () => {
+    const currentDay = dayRef.current;
+    if (!userId || !currentDay) return;
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setSaveStatus("saving");
+    try {
+      await saveNutritionDay(userId, currentDay);
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    }
+    setTimeout(() => setSaveStatus("idle"), 1500);
+  }, [userId]);
+
   return {
     day,
     loading,
@@ -129,5 +149,6 @@ export function useNutrition(
     removeFood,
     updateFood,
     refresh,
+    flushSave,
   };
 }

@@ -60,9 +60,18 @@ function EditableFoodRow({
     }
   };
 
+  const handleEditBlur = (e: React.FocusEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    handleSave();
+  };
+
   if (editing) {
     return (
-      <div className="rounded border border-rust/30 bg-white/80 px-3 py-2 space-y-2">
+      <div
+        className="rounded border border-rust/30 bg-white/80 px-3 py-2 space-y-2"
+        onBlur={handleEditBlur}
+      >
         <div className="flex gap-2">
           <input
             type="text"
@@ -205,6 +214,7 @@ export default function NutritionPage() {
     addFood,
     removeFood,
     updateFood,
+    flushSave,
   } = useNutrition(
     user?.id,
     profile?.dailyProteinGoal,
@@ -307,16 +317,23 @@ export default function NutritionPage() {
 
   const goPrevDay = () => {
     resetForm();
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(d);
+    // Defer so any blur-triggered saves (e.g. from EditableFoodRow) commit first, then flush and navigate
+    setTimeout(async () => {
+      await flushSave();
+      const d = new Date(selectedDate);
+      d.setDate(d.getDate() - 1);
+      setSelectedDate(d);
+    }, 0);
   };
 
   const goNextDay = () => {
     resetForm();
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(d);
+    setTimeout(async () => {
+      await flushSave();
+      const d = new Date(selectedDate);
+      d.setDate(d.getDate() + 1);
+      setSelectedDate(d);
+    }, 0);
   };
 
   const isToday = dateKey(selectedDate) === dateKey(new Date());
