@@ -60,7 +60,7 @@ export function useWorkouts(userId: string | undefined, selectedDate: Date) {
     refresh();
   }, [refresh]);
 
-  // Debounced auto-save: triggers 1s after last change
+  // Debounced auto-save: triggers 1s after last change. Flush on unmount so we don't lose data when navigating away.
   useEffect(() => {
     if (!userId || !workout || !initialLoadDone.current) return;
 
@@ -78,7 +78,11 @@ export function useWorkouts(userId: string | undefined, selectedDate: Date) {
     }, 1000);
 
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        saveWorkout(userId, { ...workout, date: dateStr }).catch(console.error);
+      }
     };
   }, [userId, workout, dateStr]);
 
