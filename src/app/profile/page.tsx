@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
 import { updateProfile } from "@/lib/database";
@@ -130,35 +130,53 @@ function estimateCalories(
   return Math.round(tdee + goalAdj);
 }
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  sedentary: "Sedentary",
+  light: "Light",
+  moderate: "Moderate",
+  active: "Active",
+  very_active: "Very Active",
+};
+
+function formatHeight(inches: number | undefined): string {
+  if (!inches) return "—";
+  return `${Math.floor(inches / 12)}'${inches % 12}"`;
+}
+
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
-  const [weight, setWeight] = useState(profile?.weight?.toString() ?? "");
-  const storedHeight = profile?.height ?? 0;
-  const [heightFeet, setHeightFeet] = useState(
-    storedHeight ? Math.floor(storedHeight / 12).toString() : ""
-  );
-  const [heightInches, setHeightInches] = useState(
-    storedHeight ? (storedHeight % 12).toString() : ""
-  );
+  const [editing, setEditing] = useState(false);
+  const [weight, setWeight] = useState("");
+  const [heightFeet, setHeightFeet] = useState("");
+  const [heightInches, setHeightInches] = useState("");
+  const [age, setAge] = useState("");
+  const [activityLevel, setActivityLevel] = useState("moderate");
+  const [goal, setGoal] = useState<string>("maintain");
+  const [proteinGoal, setProteinGoal] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [aiReasoning, setAiReasoning] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  // Sync form state from profile whenever it loads or changes
+  useEffect(() => {
+    if (!profile) return;
+    setWeight(profile.weight?.toString() ?? "");
+    const h = profile.height ?? 0;
+    setHeightFeet(h ? Math.floor(h / 12).toString() : "");
+    setHeightInches(h ? (h % 12).toString() : "");
+    setAge(profile.age?.toString() ?? "");
+    setActivityLevel(profile.activityLevel ?? "moderate");
+    setGoal(profile.goal ?? "maintain");
+    setProteinGoal(profile.dailyProteinGoal?.toString() ?? "");
+  }, [profile]);
 
   const totalHeightInches =
     heightFeet || heightInches
       ? (parseInt(heightFeet) || 0) * 12 + (parseInt(heightInches) || 0)
       : undefined;
-  const [age, setAge] = useState(profile?.age?.toString() ?? "");
-  const [activityLevel, setActivityLevel] = useState(
-    profile?.activityLevel ?? "moderate"
-  );
-  const [goal, setGoal] = useState<NonNullable<typeof profile>["goal"]>(
-    profile?.goal ?? "maintain"
-  );
-  const [proteinGoal, setProteinGoal] = useState(
-    profile?.dailyProteinGoal?.toString() ?? ""
-  );
-  const [loading, setLoading] = useState(false);
-  const [aiReasoning, setAiReasoning] = useState("");
-  const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
+
+  const hasProfile = !!(profile?.weight || profile?.height || profile?.age || profile?.dailyProteinGoal);
 
   const handleCalculateProtein = async () => {
     if (!user) return;
@@ -193,8 +211,8 @@ export default function ProfilePage() {
 
   const handleSaveManual = async () => {
     if (!user) return;
-    const pg = parseFloat(proteinGoal);
-    if (isNaN(pg) || pg < 0) return;
+    const pg = proteinGoal ? parseFloat(proteinGoal) : undefined;
+    if (pg !== undefined && (isNaN(pg) || pg < 0)) return;
     setLoading(true);
     setSaved(false);
     setError("");
@@ -205,9 +223,10 @@ export default function ProfilePage() {
         age: age ? parseInt(age) : undefined,
         activityLevel,
         goal,
-        dailyProteinGoal: pg,
+        ...(pg !== undefined ? { dailyProteinGoal: pg } : {}),
       });
       await refreshProfile();
+      setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -227,171 +246,274 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="font-heading text-2xl font-bold text-ink mb-6">
-        Profile
-      </h1>
-
-      <JournalCard title="Your Stats">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm text-ink/70">Weight (lbs)</label>
-            <input
-              type="number"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-ink/70">Height</label>
-            <div className="mt-1 flex gap-2">
-              <select
-                value={heightFeet}
-                onChange={(e) => setHeightFeet(e.target.value)}
-                className="flex-1 rounded border border-leather/30 px-3 py-2"
-              >
-                <option value="">ft</option>
-                <option value="4">4 ft</option>
-                <option value="5">5 ft</option>
-                <option value="6">6 ft</option>
-                <option value="7">7 ft</option>
-              </select>
-              <select
-                value={heightInches}
-                onChange={(e) => setHeightInches(e.target.value)}
-                className="flex-1 rounded border border-leather/30 px-3 py-2"
-              >
-                <option value="">in</option>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={i.toString()}>
-                    {i} in
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-ink/70">Age</label>
-            <input
-              type="number"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-ink/70">Activity level</label>
-            <select
-              value={activityLevel}
-              onChange={(e) => setActivityLevel(e.target.value as "sedentary" | "light" | "moderate" | "active" | "very_active")}
-              className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
-            >
-              <option value="sedentary">Sedentary</option>
-              <option value="light">Light</option>
-              <option value="moderate">Moderate</option>
-              <option value="active">Active</option>
-              <option value="very_active">Very active</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="block text-sm text-ink/70">Goal</label>
-            <select
-              value={goal}
-              onChange={(e) => setGoal(e.target.value as NonNullable<typeof goal>)}
-              className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
-            >
-              <option value="aggressive_bulk">Aggressive Bulk — max muscle gain, high surplus</option>
-              <option value="bulk">Lean Bulk — steady muscle gain, moderate surplus</option>
-              <option value="lean_bulk">Clean Bulk — slow gain, minimal fat</option>
-              <option value="maintain">Maintain — hold current weight &amp; composition</option>
-              <option value="cut">Cut — lose fat, preserve muscle</option>
-              <option value="aggressive_cut">Aggressive Cut — rapid fat loss</option>
-            </select>
-          </div>
-        </div>
-      </JournalCard>
-
-      <JournalCard title="Daily Protein Goal" className="mt-6">
-        <p className="text-sm text-ink/70 mb-4 leading-relaxed">
-          {getProteinNote(
-            weight ? parseFloat(weight) : undefined,
-            totalHeightInches,
-            goal ?? "maintain",
-            activityLevel
-          )}
-        </p>
-        <div className="flex gap-2 mb-4">
-          <input
-            type="number"
-            min={0}
-            value={proteinGoal}
-            onChange={(e) => setProteinGoal(e.target.value)}
-            className="w-24 rounded border border-leather/30 px-3 py-2 font-mono"
-            placeholder="150"
-          />
-          <span className="flex items-center text-ink/70">grams</span>
-        </div>
-        <button
-          onClick={handleCalculateProtein}
-          disabled={loading}
-          className="rounded bg-rust px-4 py-2 text-white hover:bg-rust/90 disabled:opacity-50 mr-2"
-        >
-          {loading ? "Calculating…" : "Calculate with AI"}
-        </button>
-        {aiReasoning && (
-          <p className="mt-4 text-sm text-ink/60 italic border-l-2 border-rust/30 pl-3">{aiReasoning}</p>
-        )}
-
-        {/* Auto-calculated calorie goal */}
-        {(() => {
-          const cal = estimateCalories(
-            weight ? parseFloat(weight) : undefined,
-            totalHeightInches,
-            age,
-            activityLevel,
-            goal ?? "maintain"
-          );
-          if (!cal) return null;
-          const goalLabel = GOAL_LABELS[goal ?? "maintain"];
-          const isSurplus = ["aggressive_bulk", "bulk", "lean_bulk"].includes(goal ?? "");
-          const isDeficit = ["cut", "aggressive_cut"].includes(goal ?? "");
-          return (
-            <div className="mt-6 rounded border border-leather/20 bg-parchment/50 px-4 py-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm text-ink/60">Estimated Daily Calories</span>
-                <span className="font-mono text-xl font-bold text-ink">{cal.toLocaleString()}</span>
-                <span className="text-sm text-ink/60">kcal</span>
-              </div>
-              <p className="mt-1 text-xs text-ink/50">
-                Based on your stats &amp; {goalLabel} goal
-                {isSurplus && " — includes a caloric surplus for muscle growth"}
-                {isDeficit && " — includes a caloric deficit for fat loss"}
-                {!isSurplus && !isDeficit && " — maintenance calories"}.
-                {" "}This is an estimate; adjust based on real-world results.
-              </p>
-            </div>
-          );
-        })()}
-      </JournalCard>
-
-      {error && (
-        <p className="mt-4 text-red-600 text-sm">{error}</p>
-      )}
-
-      <div className="mt-6 flex items-center gap-4">
-        <button
-          onClick={handleSaveManual}
-          disabled={loading}
-          className="rounded border-2 border-leather px-4 py-2 font-medium text-ink hover:bg-aged/50"
-        >
-          Save Profile
-        </button>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-heading text-2xl font-bold text-ink">
+          Profile
+        </h1>
         {saved && (
           <span className="text-sm font-medium text-green-700">
-            Profile saved successfully
+            Saved successfully
           </span>
         )}
       </div>
+
+      {/* ===== VIEW MODE ===== */}
+      {hasProfile && !editing ? (
+        <>
+          <JournalCard title="Your Stats">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <span className="block text-xs text-ink/50 uppercase tracking-wide">Weight</span>
+                <p className="font-mono text-lg text-ink">{profile?.weight ? `${profile.weight} lbs` : "—"}</p>
+              </div>
+              <div>
+                <span className="block text-xs text-ink/50 uppercase tracking-wide">Height</span>
+                <p className="font-mono text-lg text-ink">{formatHeight(profile?.height)}</p>
+              </div>
+              <div>
+                <span className="block text-xs text-ink/50 uppercase tracking-wide">Age</span>
+                <p className="font-mono text-lg text-ink">{profile?.age ?? "—"}</p>
+              </div>
+              <div>
+                <span className="block text-xs text-ink/50 uppercase tracking-wide">Activity</span>
+                <p className="font-mono text-lg text-ink">{ACTIVITY_LABELS[profile?.activityLevel ?? ""] ?? "—"}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="block text-xs text-ink/50 uppercase tracking-wide">Goal</span>
+                <p className="font-mono text-lg text-ink">{GOAL_LABELS[profile?.goal ?? ""] ?? "—"}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="mt-4 text-sm font-medium text-rust hover:underline"
+            >
+              Edit Stats
+            </button>
+          </JournalCard>
+
+          <JournalCard title="Daily Protein Goal" className="mt-6">
+            <p className="text-sm text-ink/70 mb-4 leading-relaxed">
+              {getProteinNote(
+                profile?.weight,
+                profile?.height,
+                profile?.goal ?? "maintain",
+                profile?.activityLevel ?? "moderate"
+              )}
+            </p>
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="font-mono text-2xl font-bold text-ink">
+                {profile?.dailyProteinGoal ?? "—"}
+              </span>
+              <span className="text-ink/60">grams / day</span>
+            </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="text-sm font-medium text-rust hover:underline"
+            >
+              Edit Goal
+            </button>
+
+            {/* Auto-calculated calorie goal */}
+            {(() => {
+              const cal = estimateCalories(
+                profile?.weight,
+                profile?.height,
+                (profile?.age ?? "").toString(),
+                profile?.activityLevel ?? "moderate",
+                profile?.goal ?? "maintain"
+              );
+              if (!cal) return null;
+              const goalLabel = GOAL_LABELS[profile?.goal ?? "maintain"];
+              const isSurplus = ["aggressive_bulk", "bulk", "lean_bulk"].includes(profile?.goal ?? "");
+              const isDeficit = ["cut", "aggressive_cut"].includes(profile?.goal ?? "");
+              return (
+                <div className="mt-6 rounded border border-leather/20 bg-parchment/50 px-4 py-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm text-ink/60">Estimated Daily Calories</span>
+                    <span className="font-mono text-xl font-bold text-ink">{cal.toLocaleString()}</span>
+                    <span className="text-sm text-ink/60">kcal</span>
+                  </div>
+                  <p className="mt-1 text-xs text-ink/50">
+                    Based on your stats &amp; {goalLabel} goal
+                    {isSurplus && " — includes a caloric surplus for muscle growth"}
+                    {isDeficit && " — includes a caloric deficit for fat loss"}
+                    {!isSurplus && !isDeficit && " — maintenance calories"}.
+                    {" "}This is an estimate; adjust based on real-world results.
+                  </p>
+                </div>
+              );
+            })()}
+          </JournalCard>
+        </>
+      ) : (
+        /* ===== EDIT MODE ===== */
+        <>
+          <JournalCard title="Your Stats">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-ink/70">Weight (lbs)</label>
+                <input
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-ink/70">Height</label>
+                <div className="mt-1 flex gap-2">
+                  <select
+                    value={heightFeet}
+                    onChange={(e) => setHeightFeet(e.target.value)}
+                    className="flex-1 rounded border border-leather/30 px-3 py-2"
+                  >
+                    <option value="">ft</option>
+                    <option value="4">4 ft</option>
+                    <option value="5">5 ft</option>
+                    <option value="6">6 ft</option>
+                    <option value="7">7 ft</option>
+                  </select>
+                  <select
+                    value={heightInches}
+                    onChange={(e) => setHeightInches(e.target.value)}
+                    className="flex-1 rounded border border-leather/30 px-3 py-2"
+                  >
+                    <option value="">in</option>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i} value={i.toString()}>
+                        {i} in
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-ink/70">Age</label>
+                <input
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-ink/70">Activity level</label>
+                <select
+                  value={activityLevel}
+                  onChange={(e) => setActivityLevel(e.target.value)}
+                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                >
+                  <option value="sedentary">Sedentary</option>
+                  <option value="light">Light</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="active">Active</option>
+                  <option value="very_active">Very active</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm text-ink/70">Goal</label>
+                <select
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
+                >
+                  <option value="aggressive_bulk">Aggressive Bulk — max muscle gain, high surplus</option>
+                  <option value="bulk">Lean Bulk — steady muscle gain, moderate surplus</option>
+                  <option value="lean_bulk">Clean Bulk — slow gain, minimal fat</option>
+                  <option value="maintain">Maintain — hold current weight &amp; composition</option>
+                  <option value="cut">Cut — lose fat, preserve muscle</option>
+                  <option value="aggressive_cut">Aggressive Cut — rapid fat loss</option>
+                </select>
+              </div>
+            </div>
+          </JournalCard>
+
+          <JournalCard title="Daily Protein Goal" className="mt-6">
+            <p className="text-sm text-ink/70 mb-4 leading-relaxed">
+              {getProteinNote(
+                weight ? parseFloat(weight) : undefined,
+                totalHeightInches,
+                goal ?? "maintain",
+                activityLevel
+              )}
+            </p>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="number"
+                min={0}
+                value={proteinGoal}
+                onChange={(e) => setProteinGoal(e.target.value)}
+                className="w-24 rounded border border-leather/30 px-3 py-2 font-mono"
+                placeholder="150"
+              />
+              <span className="flex items-center text-ink/70">grams</span>
+            </div>
+            <button
+              onClick={handleCalculateProtein}
+              disabled={loading}
+              className="rounded bg-rust px-4 py-2 text-white hover:bg-rust/90 disabled:opacity-50 mr-2"
+            >
+              {loading ? "Calculating…" : "Calculate with AI"}
+            </button>
+            {aiReasoning && (
+              <p className="mt-4 text-sm text-ink/60 italic border-l-2 border-rust/30 pl-3">{aiReasoning}</p>
+            )}
+
+            {/* Auto-calculated calorie goal */}
+            {(() => {
+              const cal = estimateCalories(
+                weight ? parseFloat(weight) : undefined,
+                totalHeightInches,
+                age,
+                activityLevel,
+                goal ?? "maintain"
+              );
+              if (!cal) return null;
+              const goalLabel = GOAL_LABELS[goal ?? "maintain"];
+              const isSurplus = ["aggressive_bulk", "bulk", "lean_bulk"].includes(goal ?? "");
+              const isDeficit = ["cut", "aggressive_cut"].includes(goal ?? "");
+              return (
+                <div className="mt-6 rounded border border-leather/20 bg-parchment/50 px-4 py-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm text-ink/60">Estimated Daily Calories</span>
+                    <span className="font-mono text-xl font-bold text-ink">{cal.toLocaleString()}</span>
+                    <span className="text-sm text-ink/60">kcal</span>
+                  </div>
+                  <p className="mt-1 text-xs text-ink/50">
+                    Based on your stats &amp; {goalLabel} goal
+                    {isSurplus && " — includes a caloric surplus for muscle growth"}
+                    {isDeficit && " — includes a caloric deficit for fat loss"}
+                    {!isSurplus && !isDeficit && " — maintenance calories"}.
+                    {" "}This is an estimate; adjust based on real-world results.
+                  </p>
+                </div>
+              );
+            })()}
+          </JournalCard>
+
+          {error && (
+            <p className="mt-4 text-red-600 text-sm">{error}</p>
+          )}
+
+          <div className="mt-6 flex items-center gap-4">
+            <button
+              onClick={handleSaveManual}
+              disabled={loading}
+              className="rounded bg-rust px-4 py-2 font-medium text-white hover:bg-rust/90 disabled:opacity-50"
+            >
+              {loading ? "Saving…" : "Save Profile"}
+            </button>
+            {hasProfile && (
+              <button
+                onClick={() => setEditing(false)}
+                className="rounded px-4 py-2 text-ink/70 hover:bg-aged/50"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
