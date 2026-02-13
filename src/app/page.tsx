@@ -109,7 +109,7 @@ export default function DashboardPage() {
               </div>
               <h3 className="font-heading text-xl font-bold text-ink mb-2">Protein & AI</h3>
               <p className="text-sm text-ink/70">
-                Track macros simply. Use AI to estimate protein in meals and get ingredient-based suggestions.
+                Track meals simply. Use AI to estimate protein in meals and get ingredient-based suggestions.
               </p>
             </JournalCard>
 
