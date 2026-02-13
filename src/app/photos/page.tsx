@@ -24,6 +24,14 @@ function formatShortDate(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatCompareDate(dateStr: string) {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function PhotosPage() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -539,7 +547,7 @@ export default function PhotosPage() {
             <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <div>
                 <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
-                  {formatShortDate(selectedDate)}
+                  {photo ? formatCompareDate(photo.date) : formatShortDate(selectedDate)}
                   {photo?.weight != null && (
                     <span className="ml-1 font-normal text-ink/70">
                       · {photo.weight} lbs
@@ -564,7 +572,7 @@ export default function PhotosPage() {
               </div>
               <div>
                 <p className="mb-1 sm:mb-2 text-xs sm:text-sm font-medium text-ink">
-                  {formatShortDate(new Date(compareDate + "T12:00:00"))}
+                  {comparePhoto ? formatCompareDate(comparePhoto.date) : formatCompareDate(compareDate)}
                   {comparePhoto?.weight != null && (
                     <span className="ml-1 font-normal text-ink/70">
                       · {comparePhoto.weight} lbs
