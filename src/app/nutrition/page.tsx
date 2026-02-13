@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useNutrition } from "@/hooks/useNutrition";
 import { JournalCard } from "@/components/layout/JournalCard";
+import { DateCalendarPicker } from "@/components/DateCalendarPicker";
 import { ProteinProgressBar } from "@/components/nutrition/ProteinProgressBar";
 import { CalorieTracker } from "@/components/nutrition/CalorieTracker";
 import { ShortfallAlert } from "@/components/nutrition/ShortfallAlert";
@@ -17,10 +18,6 @@ import type { FoodEntry } from "@/types";
 
 function dateKey(d: Date) {
   return d.toISOString().slice(0, 10);
-}
-
-function formatShortDate(d: Date) {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function EditableFoodRow({
@@ -414,12 +411,11 @@ export default function NutritionPage() {
             >
               ←
             </button>
-            <h1 className="font-heading text-base sm:text-xl font-bold text-ink">
-              {formatShortDate(selectedDate)}
-              {isToday && (
-                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-rust">Today</span>
-              )}
-            </h1>
+            <DateCalendarPicker
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              maxDate={new Date()}
+            />
             <button
               onClick={goNextDay}
               className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"

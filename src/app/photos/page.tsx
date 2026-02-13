@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { JournalCard } from "@/components/layout/JournalCard";
+import { DateCalendarPicker } from "@/components/DateCalendarPicker";
 import {
   getPhoto,
   getPhotosInRange,
@@ -289,8 +290,6 @@ export default function PhotosPage() {
     setSelectedDate(d);
   };
 
-  const isToday = dateStr === dateKey(new Date());
-
   if (authLoading) return null;
 
   if (!user) {
@@ -315,12 +314,11 @@ export default function PhotosPage() {
             >
               ←
             </button>
-            <h1 className="font-heading text-base sm:text-xl font-bold text-ink">
-              {formatShortDate(selectedDate)}
-              {isToday && (
-                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-rust">Today</span>
-              )}
-            </h1>
+            <DateCalendarPicker
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              maxDate={new Date()}
+            />
             <button
               onClick={goNextDay}
               className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"

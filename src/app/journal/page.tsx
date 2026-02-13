@@ -5,16 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import Link from "next/link";
 import { JournalCard } from "@/components/layout/JournalCard";
+import { DateCalendarPicker } from "@/components/DateCalendarPicker";
 import { ExerciseLog } from "@/components/workout/ExerciseLog";
 import { ExerciseSearch } from "@/components/workout/ExerciseSearch";
 import { getExerciseNames, getWorkout } from "@/lib/database";
 
 function dateKey(d: Date) {
   return d.toISOString().slice(0, 10);
-}
-
-function formatShortDate(d: Date) {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 export default function JournalPage() {
@@ -190,8 +187,6 @@ export default function JournalPage() {
     setSelectedDate(d);
   };
 
-  const isToday = dateKey(selectedDate) === dateKey(new Date());
-
   if (authLoading) return null;
 
   if (!user) {
@@ -203,7 +198,7 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-2 py-3 sm:px-4 sm:py-8">
+    <div className="mx-auto max-w-2xl min-w-0 px-2 py-3 sm:px-4 sm:py-8 overflow-x-hidden">
       <Link href="/" className="inline-flex items-center gap-1 text-xs sm:text-sm text-ink/50 hover:text-rust mb-2 sm:mb-3 px-1">
         ← Dashboard
       </Link>
@@ -216,12 +211,11 @@ export default function JournalPage() {
             >
               ←
             </button>
-            <h1 className="font-heading text-base sm:text-xl font-bold text-ink">
-              {formatShortDate(selectedDate)}
-              {isToday && (
-                <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-rust">Today</span>
-              )}
-            </h1>
+            <DateCalendarPicker
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              maxDate={new Date()}
+            />
             <button
               onClick={goNextDay}
               className="rounded px-2 py-1 sm:px-3 text-ink/70 hover:bg-aged/50"
@@ -244,7 +238,7 @@ export default function JournalPage() {
           </div>
         ) : (
           <>
-            <form onSubmit={handleAddExercise} className="mb-3 sm:mb-4 flex gap-2">
+            <form onSubmit={handleAddExercise} className="mb-3 sm:mb-4 flex gap-2 min-w-0">
               <ExerciseSearch
                 value={newExerciseName}
                 onChange={setNewExerciseName}
@@ -341,12 +335,12 @@ export default function JournalPage() {
                       dragItem.current === idx ? "opacity-50" : ""
                     }`}
                   >
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2 min-w-0">
                       <div
-                        className="flex cursor-grab items-center px-1 text-ink/30 hover:text-ink/60 active:cursor-grabbing"
+                        className="flex flex-shrink-0 cursor-grab items-center py-2 pr-0.5 sm:px-1 text-ink/30 hover:text-ink/60 active:cursor-grabbing"
                         title="Drag to reorder"
                       >
-                        <svg width="12" height="20" viewBox="0 0 12 20" fill="currentColor">
+                        <svg className="w-2.5 sm:w-3 h-5 sm:h-5" viewBox="0 0 12 20" fill="currentColor">
                           <circle cx="3" cy="4" r="1.5" />
                           <circle cx="9" cy="4" r="1.5" />
                           <circle cx="3" cy="10" r="1.5" />
@@ -355,7 +349,7 @@ export default function JournalPage() {
                           <circle cx="9" cy="16" r="1.5" />
                         </svg>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <ExerciseLog
                           exercise={ex}
                           onUpdate={(u) => updateExercise(ex.id, u)}

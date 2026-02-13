@@ -38,7 +38,7 @@ export function ExerciseLog({
   };
 
   return (
-    <div className={`rounded border p-3 sm:p-4 journal-lines ${exercise.completed ? "border-green-400/50 bg-green-50/40" : "border-leather/30 bg-white/60"}`}>
+    <div className={`rounded border p-3 sm:p-4 journal-lines min-w-0 overflow-hidden ${exercise.completed ? "border-green-400/50 bg-green-50/40" : "border-leather/30 bg-white/60"}`}>
       <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <input
@@ -95,15 +95,15 @@ export function ExerciseLog({
       <div className="space-y-2">
         {isCardio ? (
           <>
-            <div className="flex gap-2 sm:gap-4 text-xs text-ink/60 font-mono mb-2">
-              <span className="w-8 sm:w-12">#</span>
-              <span className="flex-1">Miles</span>
-              <span className="flex-1">Minutes</span>
-              {exercise.sets.length > 1 && <span className="w-5" />}
+            <div className="flex gap-1 sm:gap-4 text-xs text-ink/60 font-mono mb-2 min-w-0">
+              <span className="w-6 sm:w-12 flex-shrink-0">#</span>
+              <span className="flex-1 min-w-0 text-center">Miles</span>
+              <span className="flex-1 min-w-0 text-center">Minutes</span>
+              {exercise.sets.length > 1 && <span className="w-5 flex-shrink-0" />}
             </div>
             {exercise.sets.map((set, i) => (
-              <div key={i} className="flex items-center gap-2 sm:gap-4">
-                <span className="font-mono text-sm w-8 sm:w-12 text-ink/70">{i + 1}</span>
+              <div key={i} className="flex items-center gap-1 sm:gap-4 min-w-0">
+                <span className="font-mono text-sm w-6 sm:w-12 flex-shrink-0 text-ink/70">{i + 1}</span>
                 <input
                   type="number"
                   min={0}
@@ -112,7 +112,7 @@ export function ExerciseLog({
                   onChange={(e) =>
                     onUpdateSet(i, { distance: parseFloat(e.target.value) || 0 })
                   }
-                  className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+                  className="flex-1 min-w-0 basis-0 rounded border border-leather/30 px-1.5 sm:px-2 py-1 font-mono text-sm text-ink"
                   placeholder="0"
                 />
                 <input
@@ -123,13 +123,13 @@ export function ExerciseLog({
                   onChange={(e) =>
                     onUpdateSet(i, { time: parseFloat(e.target.value) || 0 })
                   }
-                  className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+                  className="flex-1 min-w-0 basis-0 rounded border border-leather/30 px-1.5 sm:px-2 py-1 font-mono text-sm text-ink"
                   placeholder="0"
                 />
                 {exercise.sets.length > 1 && (
                   <button
                     onClick={() => onRemoveSet(i)}
-                    className="text-ink/50 hover:text-red-600 text-sm flex-shrink-0"
+                    className="text-ink/50 hover:text-red-600 text-sm flex-shrink-0 w-5"
                     aria-label="Remove entry"
                   >
                     −
@@ -146,15 +146,15 @@ export function ExerciseLog({
           </>
         ) : (
           <>
-            <div className="flex gap-2 sm:gap-4 text-xs text-ink/60 font-mono mb-2">
-              <span className="w-8 sm:w-12">Set</span>
-              <span className="flex-1">Reps</span>
-              <span className="flex-1">Lbs</span>
-              {exercise.sets.length > 1 && <span className="w-5" />}
+            <div className="flex gap-1 sm:gap-4 text-xs text-ink/60 font-mono mb-2 min-w-0">
+              <span className="w-6 sm:w-12 flex-shrink-0">Set</span>
+              <span className="flex-1 min-w-0 text-center">Reps</span>
+              <span className="flex-1 min-w-0 text-center">Lbs</span>
+              {exercise.sets.length > 1 && <span className="w-5 flex-shrink-0" />}
             </div>
             {exercise.sets.map((set, i) => (
-              <div key={i} className="flex items-center gap-2 sm:gap-4">
-                <span className="font-mono text-sm w-8 sm:w-12 text-ink/70">{i + 1}</span>
+              <div key={i} className="flex items-center gap-1 sm:gap-4 min-w-0">
+                <span className="font-mono text-sm w-6 sm:w-12 flex-shrink-0 text-ink/70">{i + 1}</span>
                 <input
                   type="number"
                   min={0}
@@ -162,7 +162,7 @@ export function ExerciseLog({
                   onChange={(e) =>
                     onUpdateSet(i, { reps: parseInt(e.target.value) || 0 })
                   }
-                  className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+                  className="flex-1 min-w-0 basis-0 rounded border border-leather/30 px-1.5 sm:px-2 py-1 font-mono text-sm text-ink"
                   placeholder="0"
                 />
                 <input
@@ -173,13 +173,13 @@ export function ExerciseLog({
                   onChange={(e) =>
                     onUpdateSet(i, { weight: parseFloat(e.target.value) || 0 })
                   }
-                  className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
+                  className="flex-1 min-w-0 basis-0 rounded border border-leather/30 px-1.5 sm:px-2 py-1 font-mono text-sm text-ink"
                   placeholder="0"
                 />
                 {exercise.sets.length > 1 && (
                   <button
                     onClick={() => onRemoveSet(i)}
-                    className="text-ink/50 hover:text-red-600 text-sm flex-shrink-0"
+                    className="text-ink/50 hover:text-red-600 text-sm flex-shrink-0 w-5"
                     aria-label="Remove set"
                   >
                     −
