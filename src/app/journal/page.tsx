@@ -25,6 +25,10 @@ export default function JournalPage() {
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyError, setCopyError] = useState("");
+  const [showSurpriseModal, setShowSurpriseModal] = useState(false);
+  const [surpriseInput, setSurpriseInput] = useState("");
+  const [surpriseLoading, setSurpriseLoading] = useState(false);
+  const [surpriseError, setSurpriseError] = useState("");
   const {
     workout,
     loading,
@@ -80,6 +84,39 @@ export default function JournalPage() {
       setCopyError("Failed to load workout.");
     } finally {
       setCopyLoading(false);
+    }
+  };
+
+  const handleSurpriseMe = async () => {
+    const input = surpriseInput.trim();
+    // Parse optional duration: "45 min", "1 hour", "20 minute workout"
+    let durationMinutes = 30;
+    const minMatch = input.match(/(\d+)\s*(?:min|minute)/i);
+    const hrMatch = input.match(/(\d+)\s*(?:hr|hour)/i);
+    if (minMatch) durationMinutes = Math.min(120, Math.max(10, parseInt(minMatch[1], 10)));
+    else if (hrMatch) durationMinutes = Math.min(120, Math.max(10, parseInt(hrMatch[1], 10) * 60));
+
+    setSurpriseLoading(true);
+    setSurpriseError("");
+    try {
+      const res = await fetch("/api/ai/workout-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userInput: input || "Give me a balanced full-body workout",
+          durationMinutes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to generate workout");
+      if (!data.exercises?.length) throw new Error("No exercises returned");
+      importExercises(data.exercises);
+      setShowSurpriseModal(false);
+      setSurpriseInput("");
+    } catch (err) {
+      setSurpriseError(err instanceof Error ? err.message : "Failed to generate workout.");
+    } finally {
+      setSurpriseLoading(false);
     }
   };
 
@@ -208,6 +245,16 @@ export default function JournalPage() {
               )}
             </div>
 
+            {/* Surprise me */}
+            <div className="mb-4 sm:mb-6">
+              <button
+                onClick={() => setShowSurpriseModal(true)}
+                className="text-xs sm:text-sm text-rust hover:underline"
+              >
+                Surprise me
+              </button>
+            </div>
+
             <div className="space-y-4">
               {workout?.exercises?.length ? (
                 workout.exercises.map((ex, idx) => (
@@ -278,6 +325,62 @@ export default function JournalPage() {
           </>
         )}
       </JournalCard>
+
+      {/* Surprise me modal */}
+      {showSurpriseModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-lg bg-white border-2 border-leather/40 p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-lg font-bold text-ink">
+                Surprise me
+              </h3>
+              <button
+                onClick={() => {
+                  setShowSurpriseModal(false);
+                  setSurpriseInput("");
+                  setSurpriseError("");
+                }}
+                className="text-ink/50 hover:text-ink text-lg leading-none"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-ink/60 mb-3">
+              Describe the workout you want — e.g. &quot;upper body focus&quot;, &quot;leg day&quot;, &quot;quick abs&quot;, &quot;full body with cardio&quot;. AI will design a ~30 min workout using dumbbells, barbell, squat rack, and ab equipment.
+            </p>
+            <textarea
+              value={surpriseInput}
+              onChange={(e) => setSurpriseInput(e.target.value)}
+              placeholder="e.g. Upper body and abs, or Leave blank for a general full-body workout"
+              className="w-full rounded border border-leather/30 px-3 py-2 text-sm text-ink placeholder:text-ink/40 resize-none mb-4"
+              rows={3}
+            />
+            {surpriseError && (
+              <p className="text-sm text-red-600 mb-3">{surpriseError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSurpriseMe}
+                disabled={surpriseLoading}
+                className="rounded bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-50"
+              >
+                {surpriseLoading ? "Generating…" : "Generate workout"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSurpriseModal(false);
+                  setSurpriseInput("");
+                  setSurpriseError("");
+                }}
+                className="rounded px-4 py-2 text-sm text-ink/60 hover:bg-aged/50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

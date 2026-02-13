@@ -10,6 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         parchment: "#F5F0E8",
+        paper: "#FFFEF9",
         ink: "#3B2F2F",
         rust: "#C75B12",
         leather: "#8B7355",

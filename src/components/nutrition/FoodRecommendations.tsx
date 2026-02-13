@@ -70,18 +70,18 @@ export function FoodRecommendations({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="mt-6 w-full rounded-lg border-2 border-dashed border-leather/30 px-4 py-4 text-left hover:border-rust/40 transition-colors"
+        className="mt-6 w-full rounded-lg border-2 border-leather/40 bg-white/90 px-4 py-4 text-left shadow-sm hover:border-rust/50 hover:bg-white transition-colors"
       >
         <span className="font-heading font-bold text-rust">Get Meal Recommendations</span>
         <br />
-        <span className="text-xs text-ink/50">
+        <span className="text-sm text-ink/70">
           AI-powered meal suggestions to hit your protein goal
         </span>
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
-          <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-lg bg-paper p-4 sm:p-5 shadow-xl">
+          <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-lg bg-white border-2 border-leather/40 p-4 sm:p-5 shadow-2xl ring-4 ring-black/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-lg font-bold text-ink">
                 Meal Recommendations
