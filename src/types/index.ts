@@ -5,7 +5,7 @@ export interface UserProfile {
   height?: number;
   age?: number;
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
-  goal?: "bulk" | "cut" | "maintain";
+  goal?: "lean_bulk" | "bulk" | "aggressive_bulk" | "maintain" | "cut" | "aggressive_cut";
   dailyProteinGoal?: number;
 }
 
