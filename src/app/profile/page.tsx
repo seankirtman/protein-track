@@ -126,7 +126,7 @@ export default function ProfilePage() {
             <label className="block text-sm text-ink/70">Activity level</label>
             <select
               value={activityLevel}
-              onChange={(e) => setActivityLevel(e.target.value)}
+              onChange={(e) => setActivityLevel(e.target.value as "sedentary" | "light" | "moderate" | "active" | "very_active")}
               className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
             >
               <option value="sedentary">Sedentary</option>
@@ -140,7 +140,7 @@ export default function ProfilePage() {
             <label className="block text-sm text-ink/70">Goal</label>
             <select
               value={goal}
-              onChange={(e) => setGoal(e.target.value)}
+              onChange={(e) => setGoal(e.target.value as "bulk" | "cut" | "maintain")}
               className="mt-1 w-full rounded border border-leather/30 px-3 py-2"
             >
               <option value="maintain">Maintain</option>
