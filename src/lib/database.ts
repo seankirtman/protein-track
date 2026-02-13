@@ -225,6 +225,69 @@ export async function upsertExerciseCache(
 
 export { exerciseCacheKey };
 
+// Food lookup cache (protein/calories by food + quantity - avoid repeated LLM calls)
+function foodCacheKey(foodName: string, quantity?: string): { foodName: string; quantity: string } {
+  const name = foodName.toLowerCase().trim().replace(/\s+/g, " ");
+  const qty = (quantity ?? "").trim() || "1 standard serving";
+  return { foodName: name, quantity: qty };
+}
+
+export interface FoodLookupCacheEntry {
+  foodName: string;
+  quantity: string;
+  protein: number;
+  calories: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export async function getFoodLookupCache(
+  foodName: string,
+  quantity?: string
+): Promise<FoodLookupCacheEntry | null> {
+  const { foodName: keyName, quantity: keyQty } = foodCacheKey(foodName, quantity);
+  const { data, error } = await supabase
+    .from("food_lookup_cache")
+    .select("food_name, quantity, protein, calories, carbs, fat")
+    .eq("food_name", keyName)
+    .eq("quantity", keyQty)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    foodName: data.food_name,
+    quantity: data.quantity,
+    protein: Number(data.protein ?? 0),
+    calories: Number(data.calories ?? 0),
+    carbs: data.carbs != null ? Number(data.carbs) : undefined,
+    fat: data.fat != null ? Number(data.fat) : undefined,
+  };
+}
+
+export async function upsertFoodLookupCache(entry: {
+  foodName: string;
+  quantity?: string;
+  protein: number;
+  calories: number;
+  carbs?: number;
+  fat?: number;
+}) {
+  const { foodName: keyName, quantity: keyQty } = foodCacheKey(entry.foodName, entry.quantity);
+  const row = {
+    food_name: keyName,
+    quantity: keyQty,
+    protein: entry.protein,
+    calories: entry.calories,
+    carbs: entry.carbs ?? null,
+    fat: entry.fat ?? null,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase.from("food_lookup_cache").upsert(row, {
+    onConflict: "food_name,quantity",
+  });
+  if (error) throw error;
+}
+
 // Food name history (for autocomplete)
 export async function getFoodNames(userId: string): Promise<string[]> {
   const { data, error } = await supabase

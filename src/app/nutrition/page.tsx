@@ -254,6 +254,12 @@ export default function NutritionPage() {
     const calories = parseFloat(newFoodCalories) || 0;
     if (name) {
       addFood({ name, quantity, protein, calories: calories || undefined });
+      // Cache for future lookups so we don't re-call the LLM
+      fetch("/api/ai/food-cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ foodName: name, quantity, protein, calories }),
+      }).catch(() => {});
       setNewFoodName("");
       setNewFoodQuantity("");
       setNewFoodProtein("");

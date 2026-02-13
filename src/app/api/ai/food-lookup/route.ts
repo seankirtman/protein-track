@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getFoodLookupCache, upsertFoodLookupCache } from "@/lib/database";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -21,6 +22,17 @@ export async function POST(req: Request) {
     }
 
     const quantityStr = quantity?.trim() || "1 standard serving";
+
+    // Check cache first
+    const cached = await getFoodLookupCache(foodName.trim(), quantity);
+    if (cached) {
+      return NextResponse.json({
+        protein: cached.protein,
+        calories: cached.calories,
+        carbs: cached.carbs,
+        fat: cached.fat,
+      });
+    }
 
     const prompt = `You are a sports nutrition expert. Estimate the macronutrient content for this food as accurately as possible.
 
@@ -53,6 +65,16 @@ Respond with ONLY a valid JSON object (no markdown, no extra text):
       carbs: number;
       fat: number;
     };
+
+    // Cache for future lookups
+    await upsertFoodLookupCache({
+      foodName: foodName.trim(),
+      quantity: quantityStr,
+      protein: parsed.protein,
+      calories: parsed.calories,
+      carbs: parsed.carbs,
+      fat: parsed.fat,
+    });
 
     return NextResponse.json(parsed);
   } catch (err) {
