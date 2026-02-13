@@ -359,7 +359,7 @@ export default function NutritionPage() {
                 ))
               ) : (
                 <p className="py-6 text-center text-ink/50">
-                  No foods logged. Add one below.
+                  No meals logged. Add one below.
                 </p>
               )}
             </div>
@@ -425,7 +425,7 @@ export default function NutritionPage() {
                 onClick={() => setShowAddFood(true)}
                 className="mt-6 text-rust hover:underline"
               >
-                + Add food
+                + Add Meal
               </button>
             )}
 
