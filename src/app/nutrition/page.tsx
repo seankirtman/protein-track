@@ -28,18 +28,41 @@ function EditableFoodRow({
   onUpdate,
   onRemove,
   onToggleEaten,
+  onEstimateFood,
 }: {
   food: FoodEntry;
   onUpdate: (id: string, updates: Partial<FoodEntry>) => void;
   onRemove: (id: string) => void;
   onToggleEaten: (id: string) => void;
+  onEstimateFood: (name: string, quantity: string) => Promise<{ protein: number; calories: number }>;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(food.name);
   const [quantity, setQuantity] = useState(food.quantity ?? "");
   const [protein, setProtein] = useState(food.protein.toString());
   const [calories, setCalories] = useState((food.calories ?? 0).toString());
+  const [estimating, setEstimating] = useState(false);
   const isEaten = food.eaten ?? false;
+
+  // Re-estimate protein & calories when name or quantity changes while editing
+  const originalQty = food.quantity ?? "";
+  const hasChanged = name.trim() !== food.name.trim() || quantity.trim() !== originalQty.trim();
+  useEffect(() => {
+    if (!editing || !name.trim() || !hasChanged) return;
+    const timer = setTimeout(async () => {
+      setEstimating(true);
+      try {
+        const { protein: p, calories: c } = await onEstimateFood(name.trim(), quantity.trim());
+        setProtein(p.toString());
+        setCalories(c.toString());
+      } catch {
+        // Keep current values on error
+      } finally {
+        setEstimating(false);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [editing, name, quantity, hasChanged, onEstimateFood]);
 
   const handleSave = () => {
     onUpdate(food.id, {
@@ -100,6 +123,7 @@ function EditableFoodRow({
             step={0.5}
             value={protein}
             onChange={(e) => setProtein(e.target.value)}
+            placeholder={estimating ? "…" : ""}
             className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
@@ -111,6 +135,7 @@ function EditableFoodRow({
             step={1}
             value={calories}
             onChange={(e) => setCalories(e.target.value)}
+            placeholder={estimating ? "…" : ""}
             className="flex-1 min-w-0 rounded border border-leather/30 px-2 py-1 font-mono text-sm text-ink"
             onKeyDown={handleKeyDown}
           />
@@ -294,6 +319,26 @@ export default function NutritionPage() {
     }
   }, []);
 
+  const estimateFood = useCallback(
+    async (name: string, quantity: string): Promise<{ protein: number; calories: number }> => {
+      const res = await fetch("/api/ai/food-lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          foodName: name.trim(),
+          quantity: quantity.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Lookup failed");
+      return {
+        protein: Number(data.protein ?? 0),
+        calories: Number(data.calories ?? 0),
+      };
+    },
+    []
+  );
+
   // Auto-estimate protein & calories when food name or quantity changes
   useEffect(() => {
     if (!newFoodName.trim()) {
@@ -429,6 +474,7 @@ export default function NutritionPage() {
                     onUpdate={updateFood}
                     onRemove={removeFood}
                     onToggleEaten={handleToggleEaten}
+                    onEstimateFood={estimateFood}
                   />
                 ))
               ) : (
