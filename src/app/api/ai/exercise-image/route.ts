@@ -35,31 +35,16 @@ export async function POST(req: Request) {
     }
 
     const stepsList = Array.isArray(steps)
-      ? steps.filter((s) => typeof s === "string" && s.trim()).slice(0, 3)
+      ? steps.filter((s) => typeof s === "string" && s.trim())
       : [];
 
-    // Use LLM to turn steps into a precise visual prompt for WorkoutLabs-style two-panel diagram
-    let imagePrompt: string;
-    if (stepsList.length > 0) {
-      const chat = await openai.chat.completions.create({
-        model: "gpt-5-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You create DALL-E prompts for fitness instructional diagrams. Given an exercise and its steps, describe exactly what the image must show. CRITICAL: Output a description for a TWO-PANEL image (two illustrations side by side) showing the main phases: panel 1 = starting/extended position, panel 2 = contracted/peak position. Be extremely specific about body posture (e.g. "bent forward at hips, torso at 45 degrees" NOT "standing upright"), equipment position, and what makes this exercise visually distinct. Never describe a generic standing pose if the exercise requires bending, hinging, or another position. Output ONLY the prompt text, no other text.`,
-          },
-          {
-            role: "user",
-            content: `Exercise: "${exerciseName.trim()}"\nSteps:\n${stepsList.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nWrite the two-panel image prompt:`,
-          },
-        ],
-      });
-      imagePrompt = (chat.choices[0]?.message?.content?.trim() || "").replace(/^["']|["']$/g, "") || `Person performing ${exerciseName.trim()} with correct form in two panels.`;
-    } else {
-      imagePrompt = `Person performing ${exerciseName.trim()} with correct form in two panels.`;
-    }
+    const stepsBlock =
+      stepsList.length > 0
+        ? `\nSteps:\n${stepsList.map((s, i) => `${i + 1}. ${s}`).join("\n")}`
+        : "";
+    const imagePrompt = `Exercise: "${exerciseName.trim()}"${stepsBlock}
 
-    const fullPrompt = `Professional fitness instructional diagram in WorkoutLabs style. Two side-by-side panels: left panel shows starting position, right panel shows contracted position. ${imagePrompt} Clean vector-style figure illustrations, grayscale or simple colors, white background. No text or watermarks. The image MUST accurately show the exercise position described.`;
+Create two images that showcase this exercise in an informational way.`;
 
     let imageDataUrl: string | null = null;
 
@@ -78,7 +63,7 @@ export async function POST(req: Request) {
     };
 
     try {
-      imageDataUrl = await tryGenerate(fullPrompt);
+      imageDataUrl = await tryGenerate(imagePrompt);
     } catch (firstErr) {
       console.warn("exercise-image: primary generation failed, trying fallback", firstErr);
       // Fallback: simpler, more abstract prompt to avoid content policy rejections
